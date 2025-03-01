@@ -1,5 +1,4 @@
 from playwright.sync_api import sync_playwright
-import re
 
 class TripParser:
     BASE_URL = "https://www.expeditions.com/book"
@@ -21,17 +20,26 @@ class TripParser:
                 try:
                     title = trip.locator("a[rel='noreferrer']").first.inner_text().strip()
 
-                    # Normalize destinations: Remove newlines, extra spaces
-                    destinations = " ".join(
-                        [re.sub(r"\s+", " ", d.inner_text().strip()) for d in trip.locator("span[class^='card_destination']").all()]
-                    )
+                    # Extract only destination spans (ignore bullet spans)
+                    raw_destinations = [
+                        d.inner_text().strip() for d in trip.locator("span.card_destination__BatBl").all()
+                    ]
 
-                    # Normalize duration: Remove extra spaces and newlines
-                    duration = re.sub(r"\s+", " ", trip.locator("span[data-testid='expeditionCard-days']").inner_text().strip())
+                    # Assign values correctly
+                    top_level = raw_destinations[0] if len(raw_destinations) > 0 else None
+                    sub_region = raw_destinations[1] if len(raw_destinations) > 1 else None
+                    category = raw_destinations[2] if len(raw_destinations) > 2 else None
+
+                    # Normalize duration
+                    duration = trip.locator("span[data-testid='expeditionCard-days']").inner_text().strip()
 
                     trip_data = {
                         "trip_name": title,
-                        "destination": destinations,
+                        "destination": {
+                            "top_level": top_level,
+                            "sub_region": sub_region,
+                            "category": category
+                        },
                         "duration": duration,
                         "departures": []
                     }
@@ -46,8 +54,8 @@ class TripParser:
                         departure_elements = page.locator("div.departure_dates_selector")  # Adjust selector
                         for departure in departure_elements.all():
                             try:
-                                date = re.sub(r"\s+", " ", departure.locator(".date").inner_text().strip())
-                                ship = re.sub(r"\s+", " ", departure.locator(".ship").inner_text().strip())
+                                date = departure.locator(".date").inner_text().strip()
+                                ship = departure.locator(".ship").inner_text().strip()
                                 trip_data["departures"].append({"date": date, "ship": ship})
                             except:
                                 pass  # Ignore if parsing fails
