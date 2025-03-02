@@ -40,10 +40,10 @@ class TripParser:
                         year_index = 0
                         for row in departure_rows:
                             try:
-                                # Update year if a new year element is found
-                                if year_index < len(year_elements):
-                                    latest_year = year_elements[year_index].inner_text().strip()
-                                    year_index += 1
+                                # Check if a new year is found
+                                year_element = row.locator("span[data-testid='departure-hit-year']")
+                                if year_element.count() > 0:
+                                    latest_year = year_element.inner_text().strip()
                                 
                                 dates = [d.strip() for d in row.locator("p.sc-88e156bd-9").all_inner_texts()]
                                 ship_element = row.locator("div.sc-88e156bd-8 i")
