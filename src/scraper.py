@@ -12,12 +12,12 @@ class TripParser:
         logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
 
-    def fetch_trips(self, limit=1):
+    def fetch_trips(self, limit=2):
         trips = []
 
-        # Set a tighter date range for testing
-        start_date = datetime(2025, 3, 2, tzinfo=UTC)
-        end_date = datetime(2025, 3, 5, tzinfo=UTC)
+        # Updated date range for better test coverage
+        start_date = datetime(2025, 5, 13, tzinfo=UTC)
+        end_date = datetime(2025, 5, 29, tzinfo=UTC)
         start_timestamp = int(start_date.timestamp())
         end_timestamp = int(end_date.timestamp())
 
@@ -72,15 +72,17 @@ class TripParser:
                                 else:
                                     end_date = "Unknown End Date"
 
-                                ship = hit.get("ships", [{}])[0].get("name", "Unknown Ship")
-                                booking_url = f"https://www.expeditions.com/trips/{hit.get('pageSlug', '')}"
+                                # Only collect departures within the specified range
+                                if departure_timestamp and departure_timestamp <= end_timestamp:
+                                    ship = hit.get("ships", [{}])[0].get("name", "Unknown Ship")
+                                    booking_url = f"https://www.expeditions.com/trips/{hit.get('pageSlug', '')}"
 
-                                departures.append({
-                                    "start_date": start_date,
-                                    "end_date": end_date,
-                                    "ship": ship,
-                                    "booking_url": booking_url
-                                })
+                                    departures.append({
+                                        "start_date": start_date,
+                                        "end_date": end_date,
+                                        "ship": ship,
+                                        "booking_url": booking_url
+                                    })
                             except Exception as e:
                                 self.logger.warning(f"Failed to parse departure for trip '{trip_name}': {e}")
 
@@ -106,6 +108,6 @@ class TripParser:
 
 if __name__ == "__main__":
     parser = TripParser()
-    trips = parser.fetch_trips(limit=1)
+    trips = parser.fetch_trips(limit=2)
     for trip in trips:
         print(json.dumps(trip, indent=2))
