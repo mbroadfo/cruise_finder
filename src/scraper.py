@@ -7,21 +7,20 @@ class TripParser:
     ALGOLIA_URL = "https://prru6fnc68-dsn.algolia.net/1/indexes/*/queries"
     ALGOLIA_API_KEY = "a226920ace4729832564b5c9babef20c"
     ALGOLIA_APP_ID = "PRRU6FNC68"
+    DATASTEAM_URL = "https://api.datasteam.io/v1/C/RawData/CA27E6C1BB02"
 
     def __init__(self):
-        logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
 
     def fetch_trips(self, limit=2):
         trips = []
 
-        # Updated date range for better test coverage
         start_date = datetime(2025, 5, 13, tzinfo=UTC)
         end_date = datetime(2025, 5, 29, tzinfo=UTC)
         start_timestamp = int(start_date.timestamp())
         end_timestamp = int(end_date.timestamp())
 
-        # Algolia query payload using "filters" instead of "numericFilters"
         payload = {
             "requests": [
                 {
@@ -52,39 +51,9 @@ class TripParser:
                         trip_name = hit.get("name", "Unknown Trip")
                         duration = hit.get("duration", 0)
                         destinations = hit.get("destinations", [])
+                        page_slug = hit.get("pageSlug", "")
 
-                        departures = []
-                        for dep in hit.get("departureDates", []):
-                            try:
-                                departure_timestamp = dep.get("dateFromTimestamp")
-                                return_timestamp = dep.get("dateToTimestamp")
-
-                                if departure_timestamp:
-                                    start_date = datetime.fromtimestamp(departure_timestamp, UTC).strftime('%Y-%m-%d')
-                                else:
-                                    start_date = "Unknown Start Date"
-
-                                if return_timestamp:
-                                    end_date = datetime.fromtimestamp(return_timestamp, UTC).strftime('%Y-%m-%d')
-                                elif duration > 0 and departure_timestamp:
-                                    calculated_end = departure_timestamp + (duration * 86400)
-                                    end_date = datetime.fromtimestamp(calculated_end, UTC).strftime('%Y-%m-%d')
-                                else:
-                                    end_date = "Unknown End Date"
-
-                                # Only collect departures within the specified range
-                                if departure_timestamp and departure_timestamp <= end_timestamp:
-                                    ship = hit.get("ships", [{}])[0].get("name", "Unknown Ship")
-                                    booking_url = f"https://www.expeditions.com/trips/{hit.get('pageSlug', '')}"
-
-                                    departures.append({
-                                        "start_date": start_date,
-                                        "end_date": end_date,
-                                        "ship": ship,
-                                        "booking_url": booking_url
-                                    })
-                            except Exception as e:
-                                self.logger.warning(f"Failed to parse departure for trip '{trip_name}': {e}")
+                        departures = self.fetch_departures(page_slug)
 
                         if departures:
                             trips.append({
@@ -99,12 +68,45 @@ class TripParser:
                             })
                     except Exception as e:
                         self.logger.warning(f"Failed to parse trip '{hit.get('name', 'Unknown')}': {e}")
-
         except Exception as e:
             self.logger.error(f"Failed to fetch trips from Algolia API: {e}")
             return []
 
         return trips
+
+    def fetch_departures(self, page_slug):
+        departures = []
+        url = f"{self.DATASTEAM_URL}?v=da03a7a4-448a-490a-a7df-1c7b530d6912&se=9269cc8e-9766-4e31-9a05-246568cb06ca&d={page_slug}"
+        headers = {
+            "Accept": "*/*",
+            "Referer": "https://www.expeditions.com/",
+            "Sec-Fetch-Mode": "no-cors"
+        }
+
+        self.logger.debug(f"Fetching departures from URL: {url}")
+
+        try:
+            response = requests.get(url, headers=headers)
+            self.logger.debug(f"Response Status: {response.status_code}")
+            response.raise_for_status()
+            data = response.json()
+
+            self.logger.debug(f"Departure Response Data: {data}")
+
+            if data.get("Status") == "true":
+                for dep in data.get("departures", []):
+                    departures.append({
+                        "start_date": dep.get("start_date", "Unknown"),
+                        "end_date": dep.get("end_date", "Unknown"),
+                        "ship": dep.get("ship", "Unknown"),
+                        "booking_url": dep.get("booking_url", "Unknown")
+                    })
+            else:
+                self.logger.warning(f"No departures found for {page_slug}")
+        except Exception as e:
+            self.logger.error(f"Failed to fetch departures for {page_slug}: {e}")
+
+        return departures
 
 if __name__ == "__main__":
     parser = TripParser()
