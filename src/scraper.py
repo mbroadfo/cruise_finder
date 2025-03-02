@@ -21,15 +21,14 @@ class TripParser:
         start_timestamp = int(start_date.timestamp())
         end_timestamp = int(end_date.timestamp())
 
-        # Algolia query payload
+        # Algolia query payload with updated numeric filters
         payload = {
             "requests": [
                 {
                     "indexName": "prod_seaware_EXPEDITIONS",
                     "params": f"analytics=true&clickAnalytics=true&enablePersonalization=true"
                               f"&facets=%5B%22departureDates.dateFromTimestamp%22%2C%22destinations.name%22%2C%22productType%22%2C%22ships.name%22%5D"
-                              f"&numericFilters=%5B%22departureDates.dateFromTimestamp%3E%3D{start_timestamp}%22%2C"
-                              f"%22departureDates.dateFromTimestamp%3C%3D{end_timestamp}%22%5D"
+                              f"&numericFilters=%5B%22departureDates.dateFromTimestamp%3E%3D{start_timestamp}%22%2C%22departureDates.dateFromTimestamp%3C%3D{end_timestamp}%22%5D"
                               f"&page=0&query=&tagFilters=&hitsPerPage={limit}"
                 }
             ]
@@ -42,10 +41,19 @@ class TripParser:
             "X-Algolia-Agent": "Algolia for JavaScript (4.23.3); Browser (lite);"
         }
 
+        print("\nDEBUG: Algolia Request Payload:\n", json.dumps(payload, indent=2))  # Print request payload
+
         try:
             response = requests.post(self.ALGOLIA_URL, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
+
+            print("\nDEBUG: Raw Algolia API Response:\n", json.dumps(data, indent=2))  # Print raw response
+
+            if not data.get("results"):
+                self.logger.warning("No results returned from Algolia API.")
+            else:
+                print(f"Fetched {len(data.get('results', []))} results from Algolia API.")
 
             for result in data.get("results", []):
                 for hit in result.get("hits", []):
@@ -72,6 +80,10 @@ class TripParser:
                                     end_date = datetime.fromtimestamp(calculated_end, UTC).strftime('%Y-%m-%d')
                                 else:
                                     end_date = "Unknown End Date"
+                                
+                                # Ensure trip ends within valid range
+                                if return_timestamp and return_timestamp > end_timestamp:
+                                    continue
                                 
                                 ship = hit.get("ships", [{}])[0].get("name", "Unknown Ship")
                                 booking_url = f"https://www.expeditions.com/trips/{hit.get('pageSlug', '')}"
@@ -107,6 +119,6 @@ class TripParser:
 
 if __name__ == "__main__":
     parser = TripParser()
-    trips = parser.fetch_trips(limit=10)
+    trips = parser.fetch_trips(limit=1)
     for trip in trips:
         print(json.dumps(trip, indent=2))
