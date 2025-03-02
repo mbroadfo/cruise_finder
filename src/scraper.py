@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, UTC
 import json
 import logging
 import requests
+import re
 from playwright.sync_api import sync_playwright
 
 class TripParser:
@@ -9,6 +10,7 @@ class TripParser:
     ALGOLIA_API_KEY = "a226920ace4729832564b5c9babef20c"
     ALGOLIA_APP_ID = "PRRU6FNC68"
     BASE_URL = "https://www.expeditions.com"
+    DEPARTURES_URL = "https://www.expeditions.com/book?dateRange=1747116000%253A1748498400"
 
     def __init__(self):
         logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -17,102 +19,99 @@ class TripParser:
     def fetch_trips(self, limit=2):
         trips = []
 
-        start_date = datetime(2025, 5, 13, tzinfo=UTC)
-        end_date = datetime(2025, 5, 29, tzinfo=UTC)
-        start_timestamp = int(start_date.timestamp())
-        end_timestamp = int(end_date.timestamp())
-
-        payload = {
-            "requests": [
-                {
-                    "indexName": "prod_seaware_EXPEDITIONS",
-                    "params": f"analytics=true&clickAnalytics=true&enablePersonalization=true"
-                              f"&facets=%5B%22departureDates.dateFromTimestamp%22%2C%22destinations.name%22%2C%22productType%22%2C%22ships.name%22%5D"
-                              f"&filters=(departureDates.dateFromTimestamp >= {start_timestamp}) AND (departureDates.dateFromTimestamp <= {end_timestamp})"
-                              f"&page=0&query=&tagFilters=&hitsPerPage={limit}"
-                }
-            ]
-        }
-
-        headers = {
-            "Content-Type": "application/json",
-            "X-Algolia-API-Key": self.ALGOLIA_API_KEY,
-            "X-Algolia-Application-Id": self.ALGOLIA_APP_ID,
-            "X-Algolia-Agent": "Algolia for JavaScript (4.23.3); Browser (lite);"
-        }
-
-        try:
-            response = requests.post(self.ALGOLIA_URL, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
-
-            for result in data.get("results", []):
-                for hit in result.get("hits", []):
-                    try:
-                        trip_name = hit.get("name", "Unknown Trip")
-                        duration = hit.get("duration", 0)
-                        destinations = hit.get("destinations", [])
-                        page_slug = hit.get("pageSlug", "")
-
-                        departures = self.fetch_departures(page_slug)
-
-                        if departures:
-                            trips.append({
-                                "trip_name": trip_name,
-                                "destination": {
-                                    "top_level": destinations[0].get("name") if len(destinations) > 0 else None,
-                                    "sub_region": destinations[1].get("name") if len(destinations) > 1 else None,
-                                    "category": destinations[2].get("name") if len(destinations) > 2 else None
-                                },
-                                "duration": duration,
-                                "departures": departures
-                            })
-                    except Exception as e:
-                        self.logger.warning(f"Failed to parse trip '{hit.get('name', 'Unknown')}': {e}")
-        except Exception as e:
-            self.logger.error(f"Failed to fetch trips from Algolia API: {e}")
-            return []
-
-        return trips
-
-    def fetch_departures(self, page_slug):
-        departures = []
-        trip_url = f"{self.BASE_URL}/{page_slug}"
-
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
+            page.goto(self.DEPARTURES_URL, timeout=60000)
+            self.logger.debug("Navigated to departures page.")
             
-            self.logger.debug(f"Navigating to trip page: {trip_url}")
-            page.goto(trip_url, timeout=60000)
-
-            try:
-                show_departures_button = page.locator("text=Show Departures")
-                if show_departures_button.count() > 0:
-                    show_departures_button.click()
-                    self.logger.debug("Clicked 'Show Departures' button.")
-
-                page.wait_for_selector(".hits_departureHitsContainer__5zVjx", timeout=10000)
-                departure_elements = page.locator(".hits_departureHitsContainer__5zVjx li")
-
-                for i in range(departure_elements.count()):
-                    departure = departure_elements.nth(i)
-                    start_date = departure.locator("[data-testid='departure-hit-year']").text_content().strip()
-                    date_range = departure.locator(".sc-88e156bd-9").all_text_contents()
-                    ship_name = departure.locator(".sc-88e156bd-8 i").text_content().strip()
-                    booking_url = departure.locator("a").get_attribute("href")
-                    
-                    if len(date_range) >= 2:
-                        departures.append({
-                            "start_date": f"{start_date} {date_range[0]}",
-                            "end_date": f"{start_date} {date_range[1]}",
-                            "ship": ship_name,
-                            "booking_url": f"{self.BASE_URL}{booking_url}"
+            page.wait_for_selector("[class^='hit_container__']", timeout=10000)
+            trip_elements = page.locator("[class^='hit_container__']")
+            trip_count = trip_elements.count()
+            self.logger.debug(f"Found {trip_count} trips on the page.")
+            
+            for i in range(trip_count):
+                trip = trip_elements.nth(i)
+                hit_container_id = trip.get_attribute("class")
+                self.logger.debug(f"Processing trip container {i} with hit container ID: {hit_container_id}")
+                
+                trip_name_locator = trip.locator("[class^='card_name__']")
+                if trip_name_locator.count() == 0:
+                    self.logger.warning(f"No trip name found for trip index {i}")
+                    continue
+                
+                trip_name = trip_name_locator.text_content().strip()
+                trip_url = trip_name_locator.get_attribute("href")
+                
+                if trip_url:
+                    full_trip_url = f"{self.BASE_URL}{trip_url}"
+                    self.logger.debug(f"Extracted trip: {trip_name} - {full_trip_url}")
+                    departures = self.fetch_departures(page, trip)
+                    if departures:
+                        trips.append({
+                            "trip_name": trip_name,
+                            "url": full_trip_url,
+                            "departures": departures
                         })
-            except Exception as e:
-                self.logger.error(f"Failed to fetch departures for {page_slug}: {e}")
-            finally:
-                browser.close()
+                else:
+                    self.logger.warning(f"No valid link found for trip: {trip_name}")
+            browser.close()
+
+        return trips
+
+    def fetch_departures(self, page, trip):
+        departures = []
+
+        try:
+            show_departures_button = trip.locator("button", has_text="See departure dates")
+            button_count = show_departures_button.count()
+            self.logger.debug(f"Found {button_count} 'See departure dates' buttons in trip container.")
+
+            if button_count > 0:
+                self.logger.debug("Clicking 'See departure dates' button for trip.")
+                show_departures_button.first.click()
+                page.wait_for_timeout(2000)  # Allow time for departures to load
+
+                departure_container_locator = trip.locator("[class^='hits_departureHitsContainer__']")
+                page.wait_for_selector("[class^='hits_departureHitsContainer__']", timeout=7000)
+                
+                container_count = departure_container_locator.count()
+                self.logger.debug(f"Found {container_count} departure containers inside trip container after clicking button.")
+                
+                if container_count == 0:
+                    self.logger.debug("No departures found for this trip.")
+                    return departures
+                
+                elements = departure_container_locator.locator("li")
+                element_count = elements.count()
+                self.logger.debug(f"Found {element_count} departures.")
+
+                for i in range(element_count):
+                    departure = elements.nth(i)
+                    start_date_locator = departure.locator("[data-testid='departure-hit-year']")
+                    date_range_locator = departure.locator("p[class*='drDbhx']")
+                    ship_name_locator = departure.locator("i")
+                    booking_url_locator = departure.locator("a")
+                    
+                    if start_date_locator.count() == 0 or date_range_locator.count() < 2 or ship_name_locator.count() == 0 or booking_url_locator.count() == 0:
+                        self.logger.warning(f"Skipping departure {i} due to missing data.")
+                        continue
+                    
+                    start_date = start_date_locator.text_content().strip()
+                    date_range = date_range_locator.all_text_contents()
+                    ship_name = ship_name_locator.text_content().strip()
+                    booking_url = booking_url_locator.get_attribute("href")
+                    
+                    self.logger.debug(f"Extracted departure {i}: {start_date} {date_range[0]} - {start_date} {date_range[1]}, Ship: {ship_name}, Booking URL: {booking_url}")
+                    
+                    departures.append({
+                        "start_date": f"{start_date} {date_range[0]}",
+                        "end_date": f"{start_date} {date_range[1]}",
+                        "ship": ship_name,
+                        "booking_url": f"{self.BASE_URL}{booking_url}"
+                    })
+        except Exception as e:
+            self.logger.error(f"Failed to fetch departures: {e}")
 
         return departures
 
