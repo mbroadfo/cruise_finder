@@ -2,71 +2,84 @@ from playwright.sync_api import sync_playwright
 
 class TripParser:
     BASE_URL = "https://www.expeditions.com/book"
-
+    
     def fetch_trips(self, limit=10):
-        """Uses Playwright to load up to `limit` trips and extract departures."""
+        trips = []
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
             page.goto(self.BASE_URL, timeout=60000)
-
+            
             # Wait for trips to load
             page.wait_for_selector("div[class^='card_cardContent']", timeout=40000)
 
-            trips = []
-            trip_elements = page.locator("div[class^='card_cardContent']").all()[:limit]  # Limit trips
-
-            for trip in trip_elements:
+            trip_cards = page.locator("div[class^='card_cardContent']").all()[:limit]
+            for card in trip_cards:
                 try:
-                    title = trip.locator("a[rel='noreferrer']").first.inner_text().strip()
-
-                    # Extract only destination spans (ignore bullet spans)
-                    raw_destinations = [
-                        d.inner_text().strip() for d in trip.locator("span.card_destination__BatBl").all()
-                    ]
-
-                    # Assign values correctly
-                    top_level = raw_destinations[0] if len(raw_destinations) > 0 else None
-                    sub_region = raw_destinations[1] if len(raw_destinations) > 1 else None
-                    category = raw_destinations[2] if len(raw_destinations) > 2 else None
-
-                    # Normalize duration
-                    duration = trip.locator("span[data-testid='expeditionCard-days']").inner_text().strip()
-
-                    trip_data = {
-                        "trip_name": title,
+                    trip_name = card.locator("a[class^='card_name']").inner_text().strip()
+                    duration = card.locator("span[data-testid='expeditionCard-days']").inner_text().strip()
+                    
+                    # Extract destination details
+                    destinations = card.locator("span[class^='card_destination']").all_inner_texts()
+                    top_level = destinations[0].strip() if len(destinations) > 0 else None
+                    sub_region = destinations[1].strip() if len(destinations) > 1 else None
+                    category = destinations[2].strip() if len(destinations) > 2 else None
+                    
+                    # Click to reveal departures
+                    departure_button = card.locator("button:has-text('See departure dates')")
+                    departures = []
+                    if departure_button.count() > 0:
+                        departure_button.first.click(force=True)
+                        page.wait_for_selector("div[class^='hits_departureHitsContainer']", timeout=5000)
+                        
+                        # Extract departures
+                        departure_rows = page.locator("div[data-testid='departure-hit']").all()
+                        year_elements = page.locator("span[data-testid='departure-hit-year']").all()
+                        latest_year = None  # Track the most recent year
+                        
+                        year_index = 0
+                        for row in departure_rows:
+                            try:
+                                # Update year if a new year element is found
+                                if year_index < len(year_elements):
+                                    latest_year = year_elements[year_index].inner_text().strip()
+                                    year_index += 1
+                                
+                                dates = [d.strip() for d in row.locator("p.sc-88e156bd-9").all_inner_texts()]
+                                ship_element = row.locator("div.sc-88e156bd-8 i")
+                                ship = ship_element.inner_text().strip() if ship_element.count() > 0 else None
+                                price_element = row.locator("span.sc-631fca56-2")
+                                price = price_element.inner_text().strip() if price_element.count() > 0 else None
+                                booking_url_element = row.locator("a.sc-88e156bd-3")
+                                booking_url = booking_url_element.get_attribute("href") if booking_url_element.count() > 0 else None
+                                
+                                if len(dates) == 2:
+                                    departures.append({
+                                        "year": latest_year,
+                                        "start_date": dates[0],
+                                        "end_date": dates[1],
+                                        "ship": ship,
+                                        "price": price,
+                                        "booking_url": booking_url
+                                    })
+                            except Exception as e:
+                                print(f"Error extracting departure: {e}")
+                    
+                    trips.append({
+                        "trip_name": trip_name,
                         "destination": {
                             "top_level": top_level,
                             "sub_region": sub_region,
                             "category": category
                         },
                         "duration": duration,
-                        "departures": []
-                    }
-
-                    # Click "See Departure Dates" button if available
-                    departure_button = trip.locator("button:text('See departure dates')")
-                    if departure_button.is_visible():
-                        departure_button.click()
-                        page.wait_for_timeout(2000)  # Wait for departures to load
-
-                        # Extract departure dates & ship names
-                        departure_elements = page.locator("div.departure_dates_selector")  # Adjust selector
-                        for departure in departure_elements.all():
-                            try:
-                                date = departure.locator(".date").inner_text().strip()
-                                ship = departure.locator(".ship").inner_text().strip()
-                                trip_data["departures"].append({"date": date, "ship": ship})
-                            except:
-                                pass  # Ignore if parsing fails
-
-                    trips.append(trip_data)
-
+                        "departures": departures
+                    })
                 except Exception as e:
-                    print("Error extracting trip:", e)
-
+                    print(f"Error extracting trip: {e}")
+            
             browser.close()
-            return trips
+        return trips
 
 # Manual test
 if __name__ == "__main__":
