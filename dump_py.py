@@ -4,7 +4,11 @@ def dump_python_files(directory, output_file):
     # Open the output file in write mode
     with open(output_file, 'w', encoding='utf-8') as outfile:
         # Walk through the directory
-        for root, _, files in os.walk(directory):
+        for root, dirs, files in os.walk(directory):
+            # Exclude the 'vend' directory
+            if 'venv' in dirs:
+                dirs.remove('venv')  # This prevents os.walk from traversing into 'vend'
+            
             for file in files:
                 if file.endswith('.py'):  # Only process Python files
                     file_path = os.path.join(root, file)
