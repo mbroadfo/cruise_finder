@@ -1,12 +1,8 @@
 import logging
 from config import BASE_URL
 
-import logging
-from config import BASE_URL  # Ensure you import BASE_URL
-
 class CategoryParser:
     def __init__(self, booking_url, page):
-        # Ensure booking_url is absolute
         if not booking_url.startswith("http"):
             booking_url = BASE_URL + booking_url
 
@@ -16,7 +12,7 @@ class CategoryParser:
 
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
-    
+
     def fetch_categories(self):
         self.logger.info(f"Navigating to booking page: {self.booking_url}")
         self.page.goto(self.booking_url, timeout=60000)
@@ -35,14 +31,22 @@ class CategoryParser:
         for i in range(category_count):
             category = category_elements.nth(i)
 
-            # Extract Category Name
+            # Extract attributes using refined selectors
+            deck_locator = category.locator("span").filter(has_text="Deck")
             category_name_locator = category.locator("h3")
-            if category_name_locator.count() == 0:
-                self.logger.warning(f"Category {i} missing name. Skipping.")
-                continue
-            category_name = category_name_locator.text_content().strip()
+            occupancy_locator = category.locator("span").filter(has_text="Occupancy")
+            price_locator = category.locator("h2")
 
-            # Use text matching instead of class names
+            # Cabin type: Exclude buttons
+            cabin_type_locator = category.locator("span").filter(has_text="Cabin").locator(":not(button)")
+
+            deck = deck_locator.text_content().strip() if deck_locator.count() > 0 else "Unknown"
+            category_name = category_name_locator.text_content().strip() if category_name_locator.count() > 0 else "Unknown"
+            occupancy = occupancy_locator.text_content().strip() if occupancy_locator.count() > 0 else "Unknown"
+            cabin_type = cabin_type_locator.text_content().strip() if cabin_type_locator.count() > 0 else "Unknown"
+            price = price_locator.text_content().strip() if price_locator.count() > 0 else "Unknown"
+
+            # Detect availability
             see_available_button = category.locator("button").filter(has_text="See available cabins")
             join_waitlist_button = category.locator("button").filter(has_text="Join Waitlist")
 
@@ -54,13 +58,19 @@ class CategoryParser:
                 category_status = "Unknown"
 
             is_available = category_status == "Available"
-            self.logger.info(f"Category {i}: {category_name} - Status: {category_status}")
+
+            # Log only if available
+            if is_available:
+                self.logger.info(f"{category_name} - {deck}, {occupancy}, {cabin_type}, {price}, Status: {category_status}")
 
             self.categories.append({
                 "category_name": category_name,
+                "deck": deck,
+                "occupancy": occupancy,
+                "cabin_type": cabin_type,
+                "price": price,
                 "status": category_status,
                 "available": is_available
             })
 
         return self.categories
-
