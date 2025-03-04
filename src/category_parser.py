@@ -34,15 +34,18 @@ class CategoryParser:
             # Extract attributes using refined selectors
             deck_locator = category.locator("span").filter(has_text="Deck")
             category_name_locator = category.locator("h3")
-            occupancy_locator = category.locator("span").filter(has_text="Occupancy")
-            price_locator = category.locator("h2")
 
-            # Cabin type: Exclude buttons
-            cabin_type_locator = category.locator("span").filter(has_text="Cabin").locator(":not(button)")
+            # Find the container holding the pax icons and count the number of <svg> icons inside
+            pax_icons = category.locator("[class*='pax-icons_'] svg")
+
+            # Find the span containing the cabin type, avoiding buttons
+            cabin_type_locator = pax_icons.nth(pax_icons.count() - 1).locator("+ span")
+
+            price_locator = category.locator("h2")
 
             deck = deck_locator.text_content().strip() if deck_locator.count() > 0 else "Unknown"
             category_name = category_name_locator.text_content().strip() if category_name_locator.count() > 0 else "Unknown"
-            occupancy = occupancy_locator.text_content().strip() if occupancy_locator.count() > 0 else "Unknown"
+            occupancy = f"{pax_icons.count()} Person(s)" if pax_icons.count() > 0 else "Unknown"
             cabin_type = cabin_type_locator.text_content().strip() if cabin_type_locator.count() > 0 else "Unknown"
             price = price_locator.text_content().strip() if price_locator.count() > 0 else "Unknown"
 
