@@ -1,4 +1,4 @@
-from config import BASE_URL, logger
+import logging
 
 def fetch_departures(page, trip):
     departures = []
@@ -18,7 +18,7 @@ def fetch_departures(page, trip):
             element_count = elements.count()
             
             if element_count == 0:
-                logger.info("No visible departures found for this trip. Skipping.")
+                logging.info("No visible departures found for this trip. Skipping.")
                 return departures
             
             for i in range(element_count):
@@ -33,7 +33,7 @@ def fetch_departures(page, trip):
                 # If the year span is present, update latest_year
                 if year_locator.count() > 0:
                     latest_year = year_locator.text_content().strip()
-                    logger.info(f"Found year line item: {latest_year}")
+                    logging.info(f"Found year line item: {latest_year}")
                 
                 missing_fields = []
                 if latest_year is None:
@@ -44,7 +44,7 @@ def fetch_departures(page, trip):
                     missing_fields.append("booking URL")
                 
                 if missing_fields:
-                    logger.warning(f"Skipping departure {i} due to missing fields: {', '.join(missing_fields)}")
+                    logging.warning(f"Skipping departure {i} due to missing fields: {', '.join(missing_fields)}")
                     continue
                 
                 # Extract details
@@ -56,15 +56,15 @@ def fetch_departures(page, trip):
                 start_date = f"{latest_year} {date_range[0].strip()}"
                 end_date = f"{latest_year} {date_range[1].strip()}"
                 
-                logger.info(f"Found departure: {start_date} to {end_date}, Ship: {ship_name}")
+                logging.info(f"Found departure: {start_date} to {end_date}, Ship: {ship_name}")
                 
                 departures.append({
                     "start_date": start_date,
                     "end_date": end_date,
                     "ship": ship_name,
-                    "booking_url": f"{BASE_URL}{booking_url}"
+                    "booking_url": booking_url
                 })
     except Exception as e:
-        logger.error(f"Error fetching departures: {e}")
+        logging.error(f"Error fetching departures: {e}")
 
     return departures
