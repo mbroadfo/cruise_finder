@@ -61,11 +61,23 @@ class CategoryParser:
                 category_status = "Unknown"
 
             is_available = category_status == "Available"
-
-            # Log only if available
+            
+            # Count the number of cabins if available
+            num_cabins = 0
             if is_available:
-                self.logger.info(f"{category_name} - {deck}, {occupancy}, {cabin_type}, {price}, Status: {category_status}")
-
+                see_available_button.first.click()
+                self.page.wait_for_selector("[data-testid='cabin-card']", timeout=5000)
+                num_cabins = self.page.locator("[data-testid='cabin-card']").count()
+                self.logger.info(f"{category_name} - {deck}, {occupancy}, {cabin_type}, {price}, Status: {category_status}, Cabins: {num_cabins}")
+                
+                try:
+                    close_button = self.page.locator("button[data-variant='text'][data-style='link']")
+                    if close_button.count() > 0:
+                        close_button.first.click()
+                        self.page.wait_for_timeout(1000)  # Small delay to ensure the sidebar is closed
+                except Exception as e:
+                    self.logger.warning(f"Failed to close sidebar: {e}")
+            
             self.categories.append({
                 "category_name": category_name,
                 "deck": deck,
@@ -73,7 +85,8 @@ class CategoryParser:
                 "cabin_type": cabin_type,
                 "price": price,
                 "status": category_status,
-                "available": is_available
+                "available": is_available,
+                "num_cabins": num_cabins
             })
 
         return self.categories
