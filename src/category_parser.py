@@ -1,10 +1,19 @@
 import logging
+from config import BASE_URL
+
+import logging
+from config import BASE_URL  # Ensure you import BASE_URL
 
 class CategoryParser:
     def __init__(self, booking_url, page):
+        # Ensure booking_url is absolute
+        if not booking_url.startswith("http"):
+            booking_url = BASE_URL + booking_url
+
         self.booking_url = booking_url
         self.page = page
         self.categories = []
+
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
     

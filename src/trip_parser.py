@@ -50,9 +50,3 @@ class TripParser:
             browser.close()
         
         return trips
-
-if __name__ == "__main__":
-    parser = TripParser()
-    trips = parser.fetch_trips(limit=2)
-    for trip in trips:
-        print(trip)

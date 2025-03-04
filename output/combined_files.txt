@@ -43,57 +43,61 @@ print(f"All Python files have been combined into {output_file}")
 # File: .\src\category_parser.py
 
 import logging
-from playwright.sync_api import sync_playwright
 
 class CategoryParser:
-    def __init__(self, booking_url):
+    def __init__(self, booking_url, page):
         self.booking_url = booking_url
+        self.page = page
         self.categories = []
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
     
     def fetch_categories(self):
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-            page.goto(self.booking_url, timeout=60000)
-            self.logger.info(f"Loaded booking page: {self.booking_url}")
+        self.logger.info(f"Navigating to booking page: {self.booking_url}")
+        self.page.goto(self.booking_url, timeout=60000)
+        
+        self.logger.info(f"Loaded booking page: {self.booking_url}")
+        
+        try:
+            self.page.wait_for_selector("[data-testid='category-card']", timeout=10000)
+        except Exception as e:
+            self.logger.warning(f"No category cards found: {e}")
+            return []
+        
+        category_elements = self.page.locator("[data-testid='category-card']")
+        category_count = category_elements.count()
+        self.logger.info(f"Found {category_count} cabin categories.")
+        
+        for i in range(category_count):
+            category = category_elements.nth(i)
             
-            page.wait_for_selector("[data-testid='category-card']", timeout=10000)
-            category_elements = page.locator("[data-testid='category-card']")
-            category_count = category_elements.count()
-            self.logger.info(f"Found {category_count} cabin categories.")
+            category_name_locator = category.locator("h3")
+            see_available_locator = category.locator("button:text('See available cabins')")
+            join_waitlist_locator = category.locator("button:text('Join Waitlist')")
             
-            for i in range(category_count):
-                category = category_elements.nth(i)
-                
-                category_name_locator = category.locator("h3")
-                category_status_locator = category.locator("button")
-                
-                if category_name_locator.count() == 0:
-                    continue
-                
-                category_name = category_name_locator.text_content().strip()
-                category_status = category_status_locator.text_content().strip() if category_status_locator.count() > 0 else "Unknown"
-                
-                is_available = "See available cabins" in category_status
-                
-                self.categories.append({
-                    "category_name": category_name,
-                    "status": category_status,
-                    "available": is_available
-                })
+            if category_name_locator.count() == 0:
+                self.logger.warning(f"Category {i} missing name. Skipping.")
+                continue
             
-            browser.close()
+            category_name = category_name_locator.text_content().strip()
+            
+            if see_available_locator.count() > 0:
+                category_status = "Available"
+            elif join_waitlist_locator.count() > 0:
+                category_status = "Waitlist"
+            else:
+                category_status = "Unknown"
+            
+            is_available = category_status == "Available"
+            self.logger.info(f"Category {i}: {category_name} - Status: {category_status}")
+            
+            self.categories.append({
+                "category_name": category_name,
+                "status": category_status,
+                "available": is_available
+            })
         
         return self.categories
-    
-if __name__ == "__main__":
-    test_url = "https://www.expeditions.com/book/some-booking-url"  # Replace with an actual booking URL
-    parser = CategoryParser(test_url)
-    categories = parser.fetch_categories()
-    for category in categories:
-        print(category)
 
 
 # File: .\src\config.py
@@ -129,7 +133,7 @@ logger = logging.getLogger(__name__)
 
 # File: .\src\departure_parser.py
 
-from config import BASE_URL, logger
+import logging
 
 def fetch_departures(page, trip):
     departures = []
@@ -149,7 +153,7 @@ def fetch_departures(page, trip):
             element_count = elements.count()
             
             if element_count == 0:
-                logger.info("No visible departures found for this trip. Skipping.")
+                logging.info("No visible departures found for this trip. Skipping.")
                 return departures
             
             for i in range(element_count):
@@ -164,7 +168,7 @@ def fetch_departures(page, trip):
                 # If the year span is present, update latest_year
                 if year_locator.count() > 0:
                     latest_year = year_locator.text_content().strip()
-                    logger.info(f"Found year line item: {latest_year}")
+                    logging.info(f"Found year line item: {latest_year}")
                 
                 missing_fields = []
                 if latest_year is None:
@@ -175,7 +179,7 @@ def fetch_departures(page, trip):
                     missing_fields.append("booking URL")
                 
                 if missing_fields:
-                    logger.warning(f"Skipping departure {i} due to missing fields: {', '.join(missing_fields)}")
+                    logging.warning(f"Skipping departure {i} due to missing fields: {', '.join(missing_fields)}")
                     continue
                 
                 # Extract details
@@ -187,25 +191,27 @@ def fetch_departures(page, trip):
                 start_date = f"{latest_year} {date_range[0].strip()}"
                 end_date = f"{latest_year} {date_range[1].strip()}"
                 
-                logger.info(f"Found departure: {start_date} to {end_date}, Ship: {ship_name}")
+                logging.info(f"Found departure: {start_date} to {end_date}, Ship: {ship_name}")
                 
                 departures.append({
                     "start_date": start_date,
                     "end_date": end_date,
                     "ship": ship_name,
-                    "booking_url": f"{BASE_URL}{booking_url}"
+                    "booking_url": booking_url
                 })
     except Exception as e:
-        logger.error(f"Error fetching departures: {e}")
+        logging.error(f"Error fetching departures: {e}")
 
     return departures
 
 
 # File: .\src\trip_parser.py
 
-from playwright.sync_api import sync_playwright
-from config import BASE_URL, DEPARTURES_URL, logger
+import logging
+from category_parser import CategoryParser
 from departure_parser import fetch_departures
+from config import BASE_URL, DEPARTURES_URL
+from playwright.sync_api import sync_playwright
 
 class TripParser:
     def fetch_trips(self, limit=2):
@@ -215,12 +221,12 @@ class TripParser:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
             page.goto(DEPARTURES_URL, timeout=60000)
-            logger.info("Loaded departures page.")
+            logging.info("Loaded departures page.")
             
             page.wait_for_selector("[class^='hit_container__']", timeout=10000)
             trip_elements = page.locator("[class^='hit_container__']")
             trip_count = trip_elements.count()
-            logger.info(f"Found {trip_count} trips.")
+            logging.info(f"Found {trip_count} trips.")
             
             for i in range(trip_count):
                 trip = trip_elements.nth(i)
@@ -231,17 +237,27 @@ class TripParser:
                 trip_name = trip_name_locator.text_content().strip()
                 trip_url = trip_name_locator.get_attribute("href")
                 full_trip_url = f"{BASE_URL}{trip_url}" if trip_url else None
-                logger.info(f"{trip_name} - {full_trip_url}")
+                logging.info(f"{trip_name} - {full_trip_url}")
                 
                 departures = fetch_departures(page, trip)
-                if departures:
-                    trips.append({
-                        "trip_name": trip_name,
-                        "url": full_trip_url,
-                        "departures": departures
-                    })
+                
+                trips.append({
+                    "trip_name": trip_name,
+                    "url": full_trip_url,
+                    "departures": departures
+                })
+            
+            # Second pass: Process bookings for trips with departures
+            for trip in trips:
+                for departure in trip["departures"]:
+                    booking_url = departure["booking_url"]
+                    if booking_url:
+                        logging.info(f"Fetching categories for booking: {booking_url}")
+                        category_parser = CategoryParser(booking_url, page)
+                        departure["categories"] = category_parser.fetch_categories()
+            
             browser.close()
-
+        
         return trips
 
 if __name__ == "__main__":
