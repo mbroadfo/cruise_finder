@@ -57,11 +57,16 @@ class CategoryParser:
 
             if is_available:
                 see_available_button.first.click()
-                self.page.wait_for_selector("[data-testid='cabin-card']", timeout=5000)
-                self.page.wait_for_timeout(2000)  # Ensure elements load fully
-                num_cabins = self.page.locator("[data-testid='cabin-card']:visible").count()
-                self.logger.info(f"  {category_name} - {deck}, {occupancy}, {cabin_type}, {price}, Status: {category_status}, Cabins: {num_cabins}")
+                self.page.wait_for_timeout(2000)  # Ensure modal loads
 
+                try:
+                    self.page.wait_for_selector("[data-testid='cabin-card']", timeout=5000)
+                    num_cabins = self.page.locator("[data-testid='cabin-card']:visible").count()
+                    self.logger.info(f"    {category_name} - {deck}, {occupancy}, {cabin_type}, {price}, Status: {category_status}, Cabins: {num_cabins}")
+                except Exception as e:
+                    self.logger.warning(f"Error fetching available cabins for {category_name}: {e}")
+
+                # Close modal safely
                 try:
                     close_button = self.page.locator("button[data-variant='text'][data-style='link']")
                     if close_button.count() > 0:

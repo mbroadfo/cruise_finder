@@ -101,11 +101,16 @@ class CategoryParser:
 
             if is_available:
                 see_available_button.first.click()
-                self.page.wait_for_selector("[data-testid='cabin-card']", timeout=5000)
-                self.page.wait_for_timeout(2000)  # Ensure elements load fully
-                num_cabins = self.page.locator("[data-testid='cabin-card']:visible").count()
-                self.logger.info(f"  {category_name} - {deck}, {occupancy}, {cabin_type}, {price}, Status: {category_status}, Cabins: {num_cabins}")
+                self.page.wait_for_timeout(2000)  # Ensure modal loads
 
+                try:
+                    self.page.wait_for_selector("[data-testid='cabin-card']", timeout=5000)
+                    num_cabins = self.page.locator("[data-testid='cabin-card']:visible").count()
+                    self.logger.info(f"    {category_name} - {deck}, {occupancy}, {cabin_type}, {price}, Status: {category_status}, Cabins: {num_cabins}")
+                except Exception as e:
+                    self.logger.warning(f"Error fetching available cabins for {category_name}: {e}")
+
+                # Close modal safely
                 try:
                     close_button = self.page.locator("button[data-variant='text'][data-style='link']")
                     if close_button.count() > 0:
@@ -254,6 +259,15 @@ if __name__ == "__main__":
     main()
 
 
+# File: .\src\secret_event.py
+
+import logging
+
+def handle_secret_trip(page, trip_url):
+    logging.info(f"  Secret event detected for hidden trip: {trip_url}")
+    return []  # Placeholder: No actual departure fetching yet
+
+
 # File: .\src\trip_parser.py
 
 import logging
@@ -261,6 +275,7 @@ from category_parser import CategoryParser
 from departure_parser import fetch_departures
 from config import BASE_URL, DEPARTURES_URL, START_DATE, END_DATE
 from playwright.sync_api import sync_playwright
+from secret_event import handle_secret_trip
 
 class TripParser:
     def fetch_trips(self, limit=50):  # Increased limit to 50
@@ -290,9 +305,17 @@ class TripParser:
                 full_trip_url = f"{BASE_URL}{trip_url}" if trip_url else "No URL Available"
 
                 logging.info(f"[Trip {i+1}/{trip_count}] - Processing \"{trip_name}\" (URL: {full_trip_url})")
-                
-                departures = fetch_departures(page, trip)
-                
+
+                # Detect hidden trips dynamically
+                hidden_trip_locator = trip.locator("[class^='card_displayNone']")
+                is_hidden_trip = hidden_trip_locator.count() > 0
+
+                if is_hidden_trip:
+                    logging.info(f"🚨 Detected hidden trip: {trip_name}, triggering secret event handler.")
+                    departures = handle_secret_trip(page, full_trip_url)  # Call placeholder function
+                else:
+                    departures = fetch_departures(page, trip)
+
                 trips.append({
                     "trip_name": trip_name,
                     "url": full_trip_url,
@@ -301,15 +324,20 @@ class TripParser:
 
             logging.info("========== PHASE 2: Checking Cabin Availability ==========")
 
-            for trip in trips:
+            for trip_index, trip in enumerate(trips, start=1):  # Track trip number
                 trip_name = trip["trip_name"]
-                for departure in trip["departures"]:
+                
+                for dep_index, departure in enumerate(trip["departures"], start=1):  # Track departure number
                     booking_url = departure.get("booking_url", "No URL Available")
                     start_date = departure.get("start_date", "Unknown Start Date")
                     end_date = departure.get("end_date", "Unknown End Date")
 
-                    logging.info(f"Fetching cabin categories for \"{trip_name}\" ({start_date} to {end_date}) - {booking_url}")
+                    logging.info(f"[Trip {trip_index}/{len(trips)} - Departure {dep_index}/{len(trip['departures'])}] "
+                                f"Fetching cabin categories for \"{trip_name}\" ({start_date} to {end_date})")
+
                     category_parser = CategoryParser(booking_url, page)
+                    departure["categories"] = category_parser.fetch_categories()
+
                     departure["categories"] = category_parser.fetch_categories()
             
             browser.close()
