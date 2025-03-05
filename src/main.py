@@ -7,7 +7,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     
     parser = TripParser()
-    trips = parser.fetch_trips(limit=2)
+    trips = parser.fetch_trips(limit=50)
     
     for trip in trips:
         print(trip)

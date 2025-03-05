@@ -5,7 +5,7 @@ from config import BASE_URL, DEPARTURES_URL
 from playwright.sync_api import sync_playwright
 
 class TripParser:
-    def fetch_trips(self, limit=2):
+    def fetch_trips(self, limit=50):
         trips = []
 
         with sync_playwright() as p:
@@ -16,9 +16,9 @@ class TripParser:
             
             page.wait_for_selector("[class^='hit_container__']", timeout=10000)
             trip_elements = page.locator("[class^='hit_container__']")
-            trip_count = trip_elements.count()
+            trip_count = min(trip_elements.count(), limit)
             logging.info(f"Found {trip_count} trips.")
-            
+
             for i in range(trip_count):
                 trip = trip_elements.nth(i)
                 trip_name_locator = trip.locator("[class^='card_name__']")
@@ -27,8 +27,9 @@ class TripParser:
                 
                 trip_name = trip_name_locator.text_content().strip()
                 trip_url = trip_name_locator.get_attribute("href")
-                full_trip_url = f"{BASE_URL}{trip_url}" if trip_url else None
-                logging.info(f"{trip_name} - {full_trip_url}")
+                full_trip_url = f"{BASE_URL}{trip_url}" if trip_url else "No URL Available"
+
+                logging.info(f"[Trip {i+1}/{trip_count}] - Processing \"{trip_name}\" (URL: {full_trip_url})")
                 
                 departures = fetch_departures(page, trip)
                 

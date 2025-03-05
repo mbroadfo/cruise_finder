@@ -6,7 +6,7 @@ BASE_URL = "https://www.expeditions.com"
 
 # Default date range for testing
 START_DATE = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-END_DATE = (datetime.now() + timedelta(days=137)).strftime("%Y-%m-%d")
+END_DATE = (datetime.now() + timedelta(days=120)).strftime("%Y-%m-%d")
 
 # Function to convert date to timestamp
 def date_to_timestamp(date_str):
