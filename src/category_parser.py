@@ -14,9 +14,8 @@ class CategoryParser:
         self.logger = logging.getLogger(__name__)
 
     def fetch_categories(self):
-        self.logger.info(f"Navigating to booking page: {self.booking_url}")
+        self.logger.info(f"  Navigating to booking page: {self.booking_url}")
         self.page.goto(self.booking_url, timeout=60000)
-        self.logger.info(f"Loaded booking page: {self.booking_url}")
 
         try:
             self.page.wait_for_selector("[data-testid='category-card']", timeout=10000)
@@ -26,7 +25,7 @@ class CategoryParser:
 
         category_elements = self.page.locator("[data-testid='category-card']")
         category_count = category_elements.count()
-        self.logger.info(f"Found {category_count} cabin categories.")
+        self.logger.info(f"  Found {category_count} cabin categories.")
 
         for i in range(category_count):
             category = category_elements.nth(i)
@@ -61,7 +60,7 @@ class CategoryParser:
                 self.page.wait_for_selector("[data-testid='cabin-card']", timeout=5000)
                 self.page.wait_for_timeout(2000)  # Ensure elements load fully
                 num_cabins = self.page.locator("[data-testid='cabin-card']:visible").count()
-                self.logger.info(f"{category_name} - {deck}, {occupancy}, {cabin_type}, {price}, Status: {category_status}, Cabins: {num_cabins}")
+                self.logger.info(f"  {category_name} - {deck}, {occupancy}, {cabin_type}, {price}, Status: {category_status}, Cabins: {num_cabins}")
 
                 try:
                     close_button = self.page.locator("button[data-variant='text'][data-style='link']")

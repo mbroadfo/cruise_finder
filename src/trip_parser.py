@@ -44,12 +44,15 @@ class TripParser:
             logging.info("========== PHASE 2: Checking Cabin Availability ==========")
 
             for trip in trips:
+                trip_name = trip["trip_name"]
                 for departure in trip["departures"]:
-                    booking_url = departure["booking_url"]
-                    if booking_url:
-                        logging.info(f"Fetching categories for booking: {booking_url}")
-                        category_parser = CategoryParser(booking_url, page)
-                        departure["categories"] = category_parser.fetch_categories()
+                    booking_url = departure.get("booking_url", "No URL Available")
+                    start_date = departure.get("start_date", "Unknown Start Date")
+                    end_date = departure.get("end_date", "Unknown End Date")
+
+                    logging.info(f"Fetching cabin categories for \"{trip_name}\" ({start_date} to {end_date}) - {booking_url}")
+                    category_parser = CategoryParser(booking_url, page)
+                    departure["categories"] = category_parser.fetch_categories()
             
             browser.close()
         

@@ -200,7 +200,7 @@ def fetch_departures(page, trip):
 
                 if year_locator.count() > 0:
                     latest_year = year_locator.text_content().strip()
-                    logging.info(f"Found year line item: {latest_year}")
+                    logging.info(f"  Processing Departures for: {latest_year}")  # Indented message
 
                 missing_fields = []
                 if latest_year is None:
@@ -221,7 +221,7 @@ def fetch_departures(page, trip):
                 start_date = f"{latest_year} {date_range[0].strip()}"
                 end_date = f"{latest_year} {date_range[1].strip()}"
 
-                logging.info(f"Found departure: {start_date} to {end_date}, Ship: {ship_name}")
+                logging.info(f"  Found departure: {start_date} to {end_date}, Ship: {ship_name}")
 
                 departures.append({
                     "start_date": start_date,
@@ -260,18 +260,20 @@ if __name__ == "__main__":
 import logging
 from category_parser import CategoryParser
 from departure_parser import fetch_departures
-from config import BASE_URL, DEPARTURES_URL
+from config import BASE_URL, DEPARTURES_URL, START_DATE, END_DATE
 from playwright.sync_api import sync_playwright
 
 class TripParser:
-    def fetch_trips(self, limit=50):
+    def fetch_trips(self, limit=50):  # Increased limit to 50
         trips = []
 
         with sync_playwright() as p:
+            logging.info("========== PHASE 1: Gathering Departures ==========")
+
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
             page.goto(DEPARTURES_URL, timeout=60000)
-            logging.info("Loaded departures page.")
+            logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
             
             page.wait_for_selector("[class^='hit_container__']", timeout=10000)
             trip_elements = page.locator("[class^='hit_container__']")
@@ -297,8 +299,9 @@ class TripParser:
                     "url": full_trip_url,
                     "departures": departures
                 })
-            
-            # Second pass: Process bookings for trips with departures
+
+            logging.info("========== PHASE 2: Checking Cabin Availability ==========")
+
             for trip in trips:
                 for departure in trip["departures"]:
                     booking_url = departure["booking_url"]
