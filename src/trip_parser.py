@@ -3,6 +3,7 @@ from category_parser import CategoryParser
 from departure_parser import fetch_departures
 from config import BASE_URL, DEPARTURES_URL, START_DATE, END_DATE
 from playwright.sync_api import sync_playwright
+from secret_event import handle_secret_trip
 
 class TripParser:
     def fetch_trips(self, limit=50):  # Increased limit to 50
@@ -32,9 +33,17 @@ class TripParser:
                 full_trip_url = f"{BASE_URL}{trip_url}" if trip_url else "No URL Available"
 
                 logging.info(f"[Trip {i+1}/{trip_count}] - Processing \"{trip_name}\" (URL: {full_trip_url})")
-                
-                departures = fetch_departures(page, trip)
-                
+
+                # Detect hidden trips dynamically
+                hidden_trip_locator = trip.locator("[class^='card_displayNone']")
+                is_hidden_trip = hidden_trip_locator.count() > 0
+
+                if is_hidden_trip:
+                    logging.info(f"🚨 Detected hidden trip: {trip_name}, triggering secret event handler.")
+                    departures = handle_secret_trip(page, full_trip_url)  # Call placeholder function
+                else:
+                    departures = fetch_departures(page, trip)
+
                 trips.append({
                     "trip_name": trip_name,
                     "url": full_trip_url,

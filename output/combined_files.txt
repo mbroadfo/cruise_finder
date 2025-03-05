@@ -58,9 +58,8 @@ class CategoryParser:
         self.logger = logging.getLogger(__name__)
 
     def fetch_categories(self):
-        self.logger.info(f"Navigating to booking page: {self.booking_url}")
+        self.logger.info(f"  Navigating to booking page: {self.booking_url}")
         self.page.goto(self.booking_url, timeout=60000)
-        self.logger.info(f"Loaded booking page: {self.booking_url}")
 
         try:
             self.page.wait_for_selector("[data-testid='category-card']", timeout=10000)
@@ -70,7 +69,7 @@ class CategoryParser:
 
         category_elements = self.page.locator("[data-testid='category-card']")
         category_count = category_elements.count()
-        self.logger.info(f"Found {category_count} cabin categories.")
+        self.logger.info(f"  Found {category_count} cabin categories.")
 
         for i in range(category_count):
             category = category_elements.nth(i)
@@ -105,7 +104,7 @@ class CategoryParser:
                 self.page.wait_for_selector("[data-testid='cabin-card']", timeout=5000)
                 self.page.wait_for_timeout(2000)  # Ensure elements load fully
                 num_cabins = self.page.locator("[data-testid='cabin-card']:visible").count()
-                self.logger.info(f"{category_name} - {deck}, {occupancy}, {cabin_type}, {price}, Status: {category_status}, Cabins: {num_cabins}")
+                self.logger.info(f"  {category_name} - {deck}, {occupancy}, {cabin_type}, {price}, Status: {category_status}, Cabins: {num_cabins}")
 
                 try:
                     close_button = self.page.locator("button[data-variant='text'][data-style='link']")
@@ -200,7 +199,7 @@ def fetch_departures(page, trip):
 
                 if year_locator.count() > 0:
                     latest_year = year_locator.text_content().strip()
-                    logging.info(f"  Processing Departures for: {latest_year}")  # Indented message
+                    logging.info(f"  Processing Departures for: {latest_year}")
 
                 missing_fields = []
                 if latest_year is None:
@@ -303,12 +302,15 @@ class TripParser:
             logging.info("========== PHASE 2: Checking Cabin Availability ==========")
 
             for trip in trips:
+                trip_name = trip["trip_name"]
                 for departure in trip["departures"]:
-                    booking_url = departure["booking_url"]
-                    if booking_url:
-                        logging.info(f"Fetching categories for booking: {booking_url}")
-                        category_parser = CategoryParser(booking_url, page)
-                        departure["categories"] = category_parser.fetch_categories()
+                    booking_url = departure.get("booking_url", "No URL Available")
+                    start_date = departure.get("start_date", "Unknown Start Date")
+                    end_date = departure.get("end_date", "Unknown End Date")
+
+                    logging.info(f"Fetching cabin categories for \"{trip_name}\" ({start_date} to {end_date}) - {booking_url}")
+                    category_parser = CategoryParser(booking_url, page)
+                    departure["categories"] = category_parser.fetch_categories()
             
             browser.close()
         
