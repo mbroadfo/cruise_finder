@@ -5,7 +5,7 @@ from config import BASE_URL, DEPARTURES_URL
 from playwright.sync_api import sync_playwright
 
 class TripParser:
-    def fetch_trips(self, limit=50):
+    def fetch_trips(self, limit=50):  # Increased limit to 50
         trips = []
 
         with sync_playwright() as p:
@@ -18,6 +18,8 @@ class TripParser:
             trip_elements = page.locator("[class^='hit_container__']")
             trip_count = min(trip_elements.count(), limit)
             logging.info(f"Found {trip_count} trips.")
+
+            logging.info("========== PHASE 1: Gathering Departures ==========")
 
             for i in range(trip_count):
                 trip = trip_elements.nth(i)
@@ -38,8 +40,9 @@ class TripParser:
                     "url": full_trip_url,
                     "departures": departures
                 })
-            
-            # Second pass: Process bookings for trips with departures
+
+            logging.info("========== PHASE 2: Checking Cabin Availability ==========")
+
             for trip in trips:
                 for departure in trip["departures"]:
                     booking_url = departure["booking_url"]
