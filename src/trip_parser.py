@@ -6,7 +6,7 @@ from playwright.sync_api import sync_playwright
 from secret_event import handle_secret_trip
 
 class TripParser:
-    def fetch_trips(self, limit=50):  # Increased limit to 50
+    def fetch_trips(self, limit=50):  # Limit set to 50
         trips = []
 
         with sync_playwright() as p:
@@ -18,9 +18,27 @@ class TripParser:
             logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
             
             page.wait_for_selector("[class^='hit_container__']", timeout=10000)
+
             trip_elements = page.locator("[class^='hit_container__']")
-            trip_count = min(trip_elements.count(), limit)
-            logging.info(f"Found {trip_count} trips.")
+            total_loaded = trip_elements.count()
+            logging.info(f"Initial load found {total_loaded} trips.")
+
+            # Keep clicking "Show more" until we reach the limit or no more trips
+            while total_loaded < limit:
+                show_more_button = page.locator("div.infinitehits_showMore__IYt_q button")
+                if show_more_button.count() > 0:
+                    logging.info("Clicking 'Show More' to load more trips...")
+                    show_more_button.click()
+                    page.wait_for_timeout(3000)  # Wait for more trips to load
+                    total_loaded = page.locator("[class^='hit_container__']").count()
+                    logging.info(f"New total trips loaded: {total_loaded}")
+                else:
+                    logging.info("No more 'Show More' button found. Ending trip fetch.")
+                    break  # Exit loop when no more "Show more" button is available
+
+            # Adjust the trip count based on the new total_loaded
+            trip_count = min(total_loaded, limit)
+            logging.info(f"Processing {trip_count} trips.")
 
             for i in range(trip_count):
                 trip = trip_elements.nth(i)
@@ -71,3 +89,4 @@ class TripParser:
             browser.close()
         
         return trips
+
