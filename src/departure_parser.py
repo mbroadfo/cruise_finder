@@ -40,7 +40,7 @@ def fetch_departures(page, trip):
 
                 if year_locator.count() > 0:
                     latest_year = year_locator.text_content().strip()
-                    logging.info(f"  INFO - Processing Departures for: {latest_year}")  # Indented message
+                    logging.info(f"  Processing Departures for: {latest_year}")  # Indented message
 
                 missing_fields = []
                 if latest_year is None:
