@@ -84,8 +84,6 @@ class TripParser:
                     category_parser = CategoryParser(booking_url, page)
                     departure["categories"] = category_parser.fetch_categories()
 
-                    departure["categories"] = category_parser.fetch_categories()
-            
             browser.close()
         
         return trips

@@ -1,4 +1,5 @@
 import logging
+from config import BASE_URL  # Import BASE_URL instead of hardcoding
 
 def fetch_departures(page, trip):
     departures = []
@@ -8,16 +9,15 @@ def fetch_departures(page, trip):
         show_departures_button = trip.locator("button", has_text="See departure dates")
         if show_departures_button.count() > 0:
             try:
-                show_departures_button.first.scroll_into_view_if_needed()  # Ensure visibility
-                page.wait_for_timeout(1000)  # Slight delay before clicking
-                show_departures_button.first.click(timeout=15000)  # Increase timeout to 15s
+                show_departures_button.first.scroll_into_view_if_needed()
+                page.wait_for_timeout(1000)  
+                show_departures_button.first.click(timeout=15000)  
             except Exception as e:
                 logging.warning(f"Failed to click 'See departure dates': {e}")
                 return departures
             
-            # Wait for the departure list to appear
             departure_container_locator = trip.locator("[class^='hits_departureHitsContainer__']")
-            page.wait_for_timeout(2000)  # Additional delay for loading
+            page.wait_for_timeout(2000)  
             if departure_container_locator.count() == 0:
                 logging.warning("Departure list did not appear.")
                 return departures
@@ -56,12 +56,16 @@ def fetch_departures(page, trip):
 
                 date_range = date_range_locator.all_text_contents()
                 ship_name = "Land Expedition" if land_expedition_locator.count() > 0 else ship_name_locator.text_content().strip()
+                
+                # Ensure the booking URL has the full domain using BASE_URL
                 booking_url = booking_url_locator.get_attribute("href")
+                if booking_url and not booking_url.startswith("http"):
+                    booking_url = BASE_URL + booking_url  # Now using config.py
 
                 start_date = f"{latest_year} {date_range[0].strip()}"
                 end_date = f"{latest_year} {date_range[1].strip()}"
 
-                logging.info(f"  Found departure: {start_date} to {end_date}, Ship: {ship_name}")
+                logging.info(f"  Found departure: {start_date} to {end_date}, Ship: {ship_name}, URL: {booking_url}")
 
                 departures.append({
                     "start_date": start_date,
