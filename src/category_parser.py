@@ -10,7 +10,7 @@ class CategoryParser:
         self.page = page
         self.categories = []
 
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
         self.logger = logging.getLogger(__name__)
 
     def fetch_categories(self):
@@ -52,29 +52,35 @@ class CategoryParser:
             else:
                 category_status = "Unknown"
 
-            is_available = category_status == "Available"
             num_cabins = 0
 
-            if is_available:
+            if category_status == "Available":
                 see_available_button.first.click()
                 self.page.wait_for_timeout(2000)  # Ensure modal loads
 
                 try:
                     self.page.wait_for_selector("[data-testid='cabin-card']", timeout=5000)
-                    num_cabins = self.page.locator("[data-testid='cabin-card']:visible").count()
-                    self.logger.info(f"    {category_name} - {deck}, {occupancy}, {cabin_type}, {price}, Status: {category_status}, Cabins: {num_cabins}")
+
+                    # Count direct children (cabins), ignoring the first div (header)
+                    cabin_card = self.page.locator("[data-testid='cabin-card']").first
+                    direct_children = cabin_card.locator("> div")
+                    num_cabins = max(0, direct_children.count() - 1)
+
+                    self.logger.info(f"    {category_name}: {num_cabins} available cabins")
+
                 except Exception as e:
                     self.logger.warning(f"Error fetching available cabins for {category_name}: {e}")
 
-                # Close modal safely
+                # Close Modal Before Moving to Next Category
                 try:
                     close_button = self.page.locator("button[data-variant='text'][data-style='link']")
                     if close_button.count() > 0:
                         close_button.first.click()
-                        self.page.wait_for_timeout(1000)
+                        self.page.wait_for_timeout(1000)  # Allow time for modal to close
                 except Exception as e:
                     self.logger.warning(f"Failed to close sidebar: {e}")
 
+            # Store the category availability data
             self.categories.append({
                 "category_name": category_name,
                 "deck": deck,
@@ -82,7 +88,6 @@ class CategoryParser:
                 "cabin_type": cabin_type,
                 "price": price,
                 "status": category_status,
-                "available": is_available,
                 "num_cabins": num_cabins
             })
 

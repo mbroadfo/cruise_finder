@@ -26,7 +26,7 @@ def fetch_departures(page, trip):
             element_count = elements.count()
 
             if element_count == 0:
-                logging.info("No visible departures found for this trip. Skipping.")
+                logging.info("  No visible departures found for this trip. Skipping.")
                 return departures
 
             for i in range(element_count):
