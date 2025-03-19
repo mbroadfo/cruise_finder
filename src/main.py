@@ -2,7 +2,7 @@ import logging
 from trip_parser import TripParser
 from csv_export_module import save_to_csv
 
-def main():
+def main() -> None:
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     
     parser = TripParser()

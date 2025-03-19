@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 from category_parser import CategoryParser
 from departure_parser import fetch_departures
 from config import BASE_URL, DEPARTURES_URL, START_DATE, END_DATE
@@ -6,7 +7,7 @@ from playwright.sync_api import sync_playwright
 from secret_event import handle_secret_trip
 
 class TripParser:
-    def fetch_trips(self, limit=50):  # Limit set to 50
+    def fetch_trips(self, limit: int = 50) -> list[dict[str, Any]]: # Limit set to 50
         trips = []
 
         with sync_playwright() as p:

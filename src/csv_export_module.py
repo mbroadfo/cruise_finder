@@ -3,7 +3,7 @@ import logging
 import os
 from datetime import datetime
 
-def save_to_csv(trips, output_folder="output"):
+def save_to_csv(trips: list[dict], output_folder: str = "output") -> None:
     """
     Saves trip data to a CSV file, only including departures that have available cabins.
     The file name includes a timestamp to retain history.

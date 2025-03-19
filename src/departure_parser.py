@@ -1,8 +1,9 @@
 import logging
 from config import BASE_URL  # Import BASE_URL instead of hardcoding
+from typing import Any
 
-def fetch_departures(page, trip):
-    departures = []
+def fetch_departures(page: Any, trip: Any) -> list[dict[str, str]]:
+    departures: list[dict[str, str]] = []
     latest_year = None  # Reset latest_year at the start of each trip's departures
     
     try:

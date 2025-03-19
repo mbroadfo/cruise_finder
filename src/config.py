@@ -14,7 +14,7 @@ END_DATE = (datetime.now() + timedelta(days=120)).strftime("%Y-%m-%d")
 
 
 # Function to convert date to timestamp
-def date_to_timestamp(date_str):
+def date_to_timestamp(date_str: str) -> int:
     return int(datetime.strptime(date_str, "%Y-%m-%d").timestamp())
 
 START_TIMESTAMP = date_to_timestamp(START_DATE)

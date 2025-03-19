@@ -1,19 +1,20 @@
 import logging
 from config import BASE_URL
+from typing import Any
 
 class CategoryParser:
-    def __init__(self, booking_url, page):
+    def __init__(self, booking_url: str, page: Any) -> None:
         if not booking_url.startswith("http"):
             booking_url = BASE_URL + booking_url
 
         self.booking_url = booking_url
         self.page = page
-        self.categories = []
+        self.categories: list[dict[str, Any]] = []
 
         logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
         self.logger = logging.getLogger(__name__)
 
-    def fetch_categories(self):
+    def fetch_categories(self) -> list[dict[str, Any]]:
         self.logger.info(f"  Navigating to booking page: {self.booking_url}")
         self.page.goto(self.booking_url, timeout=60000)
 
