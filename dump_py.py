@@ -1,6 +1,13 @@
 import os
 
 def dump_python_files(directory, output_file):
+    # Ensure the output directory exists
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    # Delete the output file if it already exists
+    if os.path.exists(output_file):
+        os.remove(output_file)
+
     # Open the output file in write mode
     with open(output_file, 'w', encoding='utf-8') as outfile:
         # Walk through the directory
@@ -10,8 +17,10 @@ def dump_python_files(directory, output_file):
                 dirs.remove('venv')  # This prevents os.walk from traversing into 'vend'
             
             for file in files:
-                if file.endswith('.py'):  # Only process Python files
-                    file_path = os.path.join(root, file)
+                file_path = os.path.join(root, file)
+                
+                # Ignore Python files in the output directory itself
+                if file.endswith('.py') and not file_path.startswith(os.path.dirname(output_file)):
                     # Write the file name as a header
                     outfile.write(f"# File: {file_path}\n\n")
                     # Read and write the content of the file
@@ -20,8 +29,9 @@ def dump_python_files(directory, output_file):
                     outfile.write("\n\n")  # Add some space between files
 
 # Specify the directory containing your Python files and the output file
-project_directory = '.'  # Current directory (change as needed)
-output_file = 'combined_files.txt'
+project_directory = '.'  # Current directory
+output_directory = os.path.join(os.getcwd(), 'output')
+output_file = os.path.join(output_directory, 'combined_files.txt')
 
 # Combine the files
 dump_python_files(project_directory, output_file)

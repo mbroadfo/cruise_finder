@@ -8,3 +8,7 @@ __pycache__/
 # Logs and system files
 *.log
 .DS_Store
+
+# Output folder and all CSV files
+output/
+*.csv
