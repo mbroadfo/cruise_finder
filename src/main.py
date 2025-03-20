@@ -10,7 +10,6 @@ def main() -> None:
 
     if trips:
         save_to_json(trips)  # Save JSON first
-        upload_to_s3(trips)   # Then save CSV
     else:
         logging.info("No trips with available departures found. Skipping CSV export.")
 
