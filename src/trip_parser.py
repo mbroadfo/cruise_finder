@@ -82,8 +82,18 @@ class TripParser:
                     logging.info(f"[Trip {trip_index}/{len(trips)} - Departure {dep_index}/{len(trip['departures'])}] "
                                 f"Fetching cabin categories for \"{trip_name}\" ({start_date} to {end_date})")
 
+                    # Fetch categories and remove departures with no available cabins
                     category_parser = CategoryParser(booking_url, page)
-                    departure["categories"] = category_parser.fetch_categories()
+                    categories = category_parser.fetch_categories()
+                    departure["categories"] = categories
+
+                    # ✅ Remove the departure if ALL cabins are waitlisted or unavailable
+                    if all(cat["status"] == "Waitlist" for cat in categories):
+                        logging.info(f"🚫 Removing departure: {departure['start_date']} - No available cabins")
+                        continue  # Skip adding this departure to the list
+
+                    # ✅ Only add departures that have at least ONE available cabin
+                    departures.append(departure)
 
             browser.close()
         

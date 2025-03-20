@@ -82,14 +82,17 @@ class CategoryParser:
                     self.logger.warning(f"Failed to close sidebar: {e}")
 
             # Store the category availability data
-            self.categories.append({
-                "category_name": category_name,
-                "deck": deck,
-                "occupancy": occupancy,
-                "cabin_type": cabin_type,
-                "price": price,
-                "status": category_status,
-                "num_cabins": num_cabins
-            })
+            if category_status != "Waitlist":
+                self.categories.append({
+                    "category_name": category_name,
+                    "deck": deck,
+                    "occupancy": occupancy,
+                    "cabin_type": cabin_type,
+                    "price": price,
+                    "status": category_status,
+                    "num_cabins": num_cabins
+                })
+            else:
+                self.logger.info(f"    🚫 Excluding waitlisted category: {category_name} on {deck}")
 
         return self.categories
