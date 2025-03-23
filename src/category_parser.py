@@ -62,10 +62,19 @@ class CategoryParser:
                 try:
                     self.page.wait_for_selector("[data-testid='cabin-card']", timeout=5000)
 
-                    # Count direct children (cabins), ignoring the first div (header)
-                    cabin_card = self.page.locator("[data-testid='cabin-card']").first
-                    direct_children = cabin_card.locator("> div")
-                    num_cabins = max(0, direct_children.count() - 1)
+                    # Collect all visible cabin numbers in the sidebar
+                    cabin_cards = self.page.locator("[data-testid='cabin-card']")
+                    cabin_numbers = []
+
+                    for j in range(cabin_cards.count()):
+                        card = cabin_cards.nth(j)
+                        number_elem = card.locator("p").first
+                        if number_elem.count() > 0:
+                            number_text = number_elem.text_content().strip()
+                            if number_text.isdigit():
+                                cabin_numbers.append(number_text)
+
+                    num_cabins = len(cabin_numbers)
 
                     self.logger.info(f"    {category_name}: {num_cabins} available cabins")
 
@@ -90,6 +99,7 @@ class CategoryParser:
                     "cabin_type": cabin_type,
                     "price": price,
                     "status": category_status,
+                    "cabinNumbers": "|".join(cabin_numbers),
                     "num_cabins": num_cabins
                 })
             else:
