@@ -46,26 +46,37 @@ class TripParser:
                 trip_name_locator = trip.locator("[class^='card_name__']")
                 if trip_name_locator.count() == 0:
                     continue
-                
+
                 trip_name = trip_name_locator.text_content().strip()
                 trip_url = trip_name_locator.get_attribute("href")
                 full_trip_url = f"{BASE_URL}{trip_url}" if trip_url else "No URL Available"
 
                 logging.info(f"[Trip {i+1}/{trip_count}] - Processing \"{trip_name}\" (URL: {full_trip_url})")
 
-                # Detect hidden trips dynamically
+                # Extract image URL
+                image_locator = trip.locator("img[class^='card_image__']")
+                image_url = image_locator.get_attribute("src") if image_locator.count() > 0 else ""
+
+                # Extract destination tags
+                dest_spans = trip.locator("div[class^='card_list__'] span[class^='card_destination__']")
+                destinations = [dest_spans.nth(j).text_content().strip() for j in range(dest_spans.count())]
+                destination_str = "|".join(destinations)
+
+                # Detect hidden trips
                 hidden_trip_locator = trip.locator("[class^='card_displayNone']")
                 is_hidden_trip = hidden_trip_locator.count() > 0
 
                 if is_hidden_trip:
                     logging.info(f"🚨 Detected hidden trip: {trip_name}, triggering secret event handler.")
-                    departures = handle_secret_trip(page, full_trip_url)  # Call placeholder function
+                    departures = handle_secret_trip(page, full_trip_url)
                 else:
                     departures = fetch_departures(page, trip)
 
                 trips.append({
                     "trip_name": trip_name,
                     "url": full_trip_url,
+                    "image_url": image_url,
+                    "destinations": destination_str,
                     "departures": departures
                 })
 
@@ -73,6 +84,7 @@ class TripParser:
 
             for trip_index, trip in enumerate(trips, start=1):  # Track trip number
                 trip_name = trip["trip_name"]
+                valid_departures = []
                 
                 for dep_index, departure in enumerate(trip["departures"], start=1):  # Track departure number
                     booking_url = departure.get("booking_url", "No URL Available")
@@ -93,7 +105,9 @@ class TripParser:
                         continue  # Skip adding this departure to the list
 
                     # ✅ Only add departures that have at least ONE available cabin
-                    departures.append(departure)
+                    valid_departures.append(departure)
+                    
+                trip["departures"] = valid_departures
 
             browser.close()
         

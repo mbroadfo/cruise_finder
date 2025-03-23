@@ -1,0 +1,5 @@
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "W"]  # Error, formatting, warnings
+ignore = ["E501"]         # Ignore long lines if you want
+exclude = ["venv", ".venv", "__pycache__"]
