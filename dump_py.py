@@ -15,10 +15,10 @@ def dump_python_files(directory, output_file):
             # Exclude the 'vend' directory
             if 'venv' in dirs:
                 dirs.remove('venv')  # This prevents os.walk from traversing into 'vend'
-            
+
             for file in files:
                 file_path = os.path.join(root, file)
-                
+
                 # Ignore Python files in the output directory itself
                 if file.endswith('.py') and not file_path.startswith(os.path.dirname(output_file)):
                     # Write the file name as a header

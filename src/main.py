@@ -1,6 +1,6 @@
 import logging
 from trip_parser import TripParser
-from save_trips import save_to_json, upload_to_s3
+from save_trips import save_to_json
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")

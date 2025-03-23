@@ -17,7 +17,7 @@ class TripParser:
             page = browser.new_page()
             page.goto(DEPARTURES_URL, timeout=60000)
             logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
-            
+
             page.wait_for_selector("[class^='hit_container__']", timeout=10000)
 
             trip_elements = page.locator("[class^='hit_container__']")
@@ -85,7 +85,7 @@ class TripParser:
             for trip_index, trip in enumerate(trips, start=1):  # Track trip number
                 trip_name = trip["trip_name"]
                 valid_departures = []
-                
+
                 for dep_index, departure in enumerate(trip["departures"], start=1):  # Track departure number
                     booking_url = departure.get("booking_url", "No URL Available")
                     start_date = departure.get("start_date", "Unknown Start Date")
@@ -106,10 +106,10 @@ class TripParser:
 
                     # ✅ Only add departures that have at least ONE available cabin
                     valid_departures.append(departure)
-                    
+
                 trip["departures"] = valid_departures
 
             browser.close()
-        
+
         return trips
 

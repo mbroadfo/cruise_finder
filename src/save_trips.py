@@ -35,7 +35,7 @@ def save_to_json(trips: list[dict[str, Any]]) -> str:
             json.dump(trips, f, indent=4)
 
         logging.info("✅ JSON file saved successfully.")
-        
+
         # Uploading using the updated upload_to_s3 function
         upload_to_s3(JSON_FILENAME)
 
@@ -66,7 +66,7 @@ def upload_to_s3(file_path: str) -> None:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-    
+
     if os.path.exists(JSON_FILENAME):
         logging.info(f"✅ JSON file exists: {JSON_FILENAME}. Uploading to S3...")
         upload_to_s3(JSON_FILENAME)
