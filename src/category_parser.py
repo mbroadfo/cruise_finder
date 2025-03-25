@@ -54,6 +54,7 @@ class CategoryParser:
                 category_status = "Unknown"
 
             num_cabins = 0
+            cabin_numbers: list[str] = []
 
             if category_status == "Available":
                 see_available_button.first.click()
@@ -64,7 +65,6 @@ class CategoryParser:
 
                     # Collect all visible cabin numbers in the sidebar
                     cabin_cards = self.page.locator("[data-testid='cabin-card']")
-                    cabin_numbers = []
 
                     for j in range(cabin_cards.count()):
                         card = cabin_cards.nth(j)
