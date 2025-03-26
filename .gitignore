@@ -12,3 +12,6 @@ __pycache__/
 # Output folder and all CSV files
 output/
 *.csv
+
+# AWS Credentials
+*.env
