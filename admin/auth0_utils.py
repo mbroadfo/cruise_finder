@@ -71,6 +71,67 @@ def send_password_reset_email(email, token=None):
     if not resp.ok:
         print("❌ Password reset request failed:")
         print(resp.status_code, resp.text)
-
-    resp.raise_for_status()
+        resp.raise_for_status()
     print("📬 Password reset email sent by Auth0!")
+
+def find_user(email):
+    """List all users in the Auth0 tenant."""
+    token = get_m2m_token()
+    url = f"https://{AUTH0_DOMAIN}/api/v2/users?q={email}"
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+    
+    resp = requests.get(url, headers=headers)
+    resp.raise_for_status()
+    users = resp.json()
+    
+    return users[0] if users else None
+    
+def list_users():
+    """List all users in the Auth0 tenant."""
+    token = get_m2m_token()
+    url = f"https://{AUTH0_DOMAIN}/api/v2/users"
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    users = []
+    page = 0
+    per_page = 50  # max allowed by Auth0 is 100
+
+    while True:
+        params = {
+            "page": page,
+            "per_page": per_page
+        }
+
+        resp = requests.get(url, headers=headers, params=params)
+        resp.raise_for_status()
+        batch = resp.json()
+
+        if not batch:
+            break  # No more users
+
+        users.extend(batch)
+        page += 1
+
+    print(f"\n👥 Found {len(users)} users:\n")
+    for user in users:
+        print(f"- {user.get('email')} ({user.get('user_id')})")
+
+def delete_user(user_id):
+    """Delete a user from Auth0 by user ID."""
+    token = get_m2m_token()
+    url = f"https://{AUTH0_DOMAIN}/api/v2/users/{user_id}"
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    resp = requests.delete(url, headers=headers)
+    if resp.status_code == 204:
+        print(f"🗑️ User {user_id} deleted successfully.")
+    else:
+        print("❌ Failed to delete user:")
+        print(resp.status_code, resp.text)
+        resp.raise_for_status()
