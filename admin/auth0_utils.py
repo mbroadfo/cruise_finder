@@ -60,7 +60,8 @@ def send_password_reset_email(email, token=None):
     payload = {
         "client_id": AUTH0_WEB_CLIENT_ID,
         "email": email,
-        "connection": AUTH0_CONNECTION
+        "connection": AUTH0_CONNECTION,
+        "redirect_uri": os.getenv("REDIRECT_URI")
     }
     headers = {
         "Content-Type": "application/json"
@@ -125,6 +126,7 @@ def list_users():
     print(f"\n👥 Found {len(users)} users:\n")
     for user in users:
         print(f"- {user.get('email')} ({user.get('user_id')})")
+    print(f"")
 
 def delete_user(user_id):
     """Delete a user from Auth0 by user ID."""
