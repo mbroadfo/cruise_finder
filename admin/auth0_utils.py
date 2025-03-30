@@ -2,6 +2,9 @@ import os
 import requests
 import secrets
 import string
+import sys
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, project_root)
 from src.aws_secrets import inject_env_from_secrets
 
 # Inject secrets from AWS Secrets Manager
