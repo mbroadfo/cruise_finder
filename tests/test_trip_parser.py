@@ -1,5 +1,5 @@
 import unittest
-from src.scraper import TripParser
+from src.trip_parser import TripParser
 
 class TestTripParser(unittest.TestCase):
 

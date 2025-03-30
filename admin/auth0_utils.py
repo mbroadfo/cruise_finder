@@ -45,6 +45,7 @@ def create_user(email, given_name, family_name, token):
         "given_name": given_name,
         "family_name": family_name,
         "connection": AUTH0_CONNECTION,
+        "email_verified": True,
         "password": generate_temp_password()
     }
     resp = requests.post(url, json=payload, headers=headers)
