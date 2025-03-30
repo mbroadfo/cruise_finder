@@ -1,6 +1,8 @@
 import logging
 from trip_parser import TripParser
 from save_trips import save_to_json
+from aws_secrets import inject_env_from_secrets
+inject_env_from_secrets("cruise-finder-secrets")
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")

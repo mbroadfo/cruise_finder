@@ -1,0 +1,5 @@
+Flask
+click
+boto3
+requests
+playwright

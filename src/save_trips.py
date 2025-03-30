@@ -1,8 +1,12 @@
+import os
 import json
 import logging
-import os
 from typing import Any
 import boto3
+from aws_secrets import inject_env_from_secrets
+
+# Load secrets (early)
+inject_env_from_secrets("cruise-finder-secrets")
 
 # AWS S3 Configuration
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID")

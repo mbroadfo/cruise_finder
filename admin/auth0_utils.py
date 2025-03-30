@@ -2,9 +2,10 @@ import os
 import requests
 import secrets
 import string
-from dotenv import load_dotenv
+from src.aws_secrets import inject_env_from_secrets
 
-load_dotenv()
+# Inject secrets from AWS Secrets Manager
+inject_env_from_secrets("cruise-finder-secrets")
 
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
 AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID")
@@ -12,6 +13,7 @@ AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET")
 AUTH0_WEB_CLIENT_ID = os.getenv("AUTH0_WEB_CLIENT_ID")
 AUTH0_CONNECTION = os.getenv("AUTH0_CONNECTION", "Username-Password-Authentication")
 CLOUD_FRONT_URI = os.getenv("CLOUD_FRONT_URI")
+
 
 def get_m2m_token():
     url = f"https://{AUTH0_DOMAIN}/oauth/token"
