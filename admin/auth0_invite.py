@@ -41,7 +41,6 @@ def create_user(email, given_name, family_name, token):
         "given_name": given_name,
         "family_name": family_name,
         "connection": AUTH0_CONNECTION,
-        "email_verified": False,
         "password": password
     }
 
