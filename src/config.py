@@ -9,9 +9,8 @@ START_DATE = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
 END_DATE = (datetime.now() + timedelta(days=120)).strftime("%Y-%m-%d")
 
 # Override date range for testing
-#START_DATE = "2025-03-23"
-#END_DATE = "2025-03-31"
-
+#START_DATE = "2025-04-01"
+#END_DATE = "2025-12-31"
 
 # Function to convert date to timestamp
 def date_to_timestamp(date_str: str) -> int:
