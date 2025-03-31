@@ -130,3 +130,27 @@ resource "aws_ecs_task_definition" "cruise_task" {
     }
   ])
 }
+
+# --------------------------------------
+# ECR Lifecycle Policy
+# --------------------------------------
+resource "aws_ecr_lifecycle_policy" "cruise_cleanup" {
+  repository = aws_ecr_repository.cruise_finder.name
+
+  policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Keep last 3 images only"
+        selection = {
+          tagStatus     = "any"
+          countType     = "imageCountMoreThan"
+          countNumber   = 3
+        }
+        action = {
+          type = "expire"
+        }
+      }
+    ]
+  })
+}
