@@ -17,19 +17,19 @@ class TripParser:
             page = browser.new_page()
             page.goto(DEPARTURES_URL, timeout=60000)
             
-            # Forcefully dismiss the GDPR/CCPA overlays if they exist in DOM
+            # Aggressively remove GDPR blocker using inline script
             try:
                 page.evaluate("""
                     const wrapper = document.querySelector('div[type="GDPR"]#wrapper');
-                    const blocker = wrapper?.querySelector('div[class^="sc-b5ddf3cd-0"]');
-                    if (blocker) {
-                        blocker.remove();
-                        console.log("Removed GDPR blocker element.");
+                    if (wrapper) {
+                        wrapper.style.display = 'none';
+                        wrapper.remove();
+                        console.log("GDPR blocker removed forcibly.");
                     }
                 """)
-                print("Checked and removed GDPR blocker if present.")
+                print("Forced removal of GDPR blocker if present.")
             except Exception as e:
-                print(f"Could not remove GDPR blocker: {e}")
+                print(f"Could not forcibly remove GDPR blocker: {e}")
 
             logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
 
