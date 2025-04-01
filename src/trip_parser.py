@@ -17,20 +17,17 @@ class TripParser:
             page = browser.new_page()
             page.goto(DEPARTURES_URL, timeout=60000)
             
-            # Handle GDPR and CCPA banners
+            # Forcefully dismiss the GDPR/CCPA overlays if they exist in DOM
             for banner_type in ["GDPR", "CCPA"]:
                 try:
-                    wrapper = page.locator(f"div#wrapper[type='{banner_type}']")
-                    ok_button = wrapper.locator("button", has_text="Ok")
-                    if ok_button.is_visible(timeout=3000):
-                        logging.info(f"Clicking {banner_type} 'Ok' button inside wrapper...")
-                        ok_button.click()
+                    wrapper = page.locator(f"div[type='{banner_type}']")
+                    if wrapper.count() > 0:
+                        logging.info(f"Forcing removal of {banner_type} banner...")
+                        page.evaluate("""el => el.remove()""", wrapper)
                         page.wait_for_timeout(1000)
-                    else:
-                        logging.info(f"{banner_type} 'Ok' button not visible.")
                 except Exception as e:
-                    logging.info(f"{banner_type} acceptance not triggered or failed gracefully: {e}")
-            
+                    logging.warning(f"Failed to forcibly remove {banner_type} banner: {e}")
+
             logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
 
             page.wait_for_selector("[class^='hit_container__']", timeout=10000)
