@@ -17,15 +17,14 @@ class TripParser:
             page = browser.new_page()
             page.goto(DEPARTURES_URL, timeout=60000)
             
-            # Dismiss GDPR overlay if present
+            # Try to remove GDPR banner before interacting
             try:
-                # Adjust selector if needed
-                gdpr_button = page.locator("button:text('Accept All')")  # or 'Accept', or class name
-                if gdpr_button.is_visible():
-                    print("GDPR banner found, clicking to dismiss...")
-                    gdpr_button.click()
+                gdpr_overlay = page.locator("#wrapper")
+                if gdpr_overlay.is_visible():
+                    print("GDPR overlay found, removing it...")
+                    page.evaluate("document.getElementById('wrapper')?.remove()")
             except Exception as e:
-                print(f"GDPR banner not found or couldn't click: {e}")
+                print(f"GDPR banner not found or not removable: {e}")
             
             logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
 
