@@ -28,9 +28,15 @@ jobs:
     - name: 🛠️ Build Docker image
       run: |
         IMAGE_TAG=${{ github.sha }}
-        docker build -t ${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG .
+        REPO=${{ secrets.ECR_REPOSITORY }}
+
+        docker build -t $REPO:$IMAGE_TAG .
+        docker tag $REPO:$IMAGE_TAG $REPO:latest  # Add this line
 
     - name: 🚀 Push image to ECR
       run: |
         IMAGE_TAG=${{ github.sha }}
-        docker push ${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
+        REPO=${{ secrets.ECR_REPOSITORY }}
+
+        docker push $REPO:$IMAGE_TAG
+        docker push $REPO:latest  # Add this line
