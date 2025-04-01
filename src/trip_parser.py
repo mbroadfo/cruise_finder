@@ -1,5 +1,6 @@
 import logging
 from typing import Any
+from time import time
 from category_parser import CategoryParser
 from departure_parser import fetch_departures
 from config import BASE_URL, DEPARTURES_URL, START_DATE, END_DATE
@@ -17,23 +18,27 @@ class TripParser:
             page = browser.new_page()
             page.goto(DEPARTURES_URL, timeout=60000)
             
-            # Aggressively remove GDPR blocker using inline script
+            logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
+
+            page.wait_for_selector("[class^='hit_container__']", timeout=10000)
+            
+            # Forcefully dismiss the GDPR overlay if it exists
             try:
                 page.evaluate("""
                     const wrapper = document.querySelector('div[type="GDPR"]#wrapper');
                     if (wrapper) {
                         wrapper.style.display = 'none';
                         wrapper.remove();
-                        console.log("GDPR blocker removed forcibly.");
+                        const removed = !document.contains(wrapper);
+                        if (removed) {
+                            console.log("GDPR blocker removed from DOM.");
+                        }
                     }
                 """)
                 print("Forced removal of GDPR blocker if present.")
+                time.sleep(2)  # Give time for DOM update
             except Exception as e:
-                print(f"Could not forcibly remove GDPR blocker: {e}")
-
-            logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
-
-            page.wait_for_selector("[class^='hit_container__']", timeout=10000)
+                print(f"Could not remove GDPR blocker: {e}")
 
             trip_elements = page.locator("[class^='hit_container__']")
             total_loaded = trip_elements.count()
