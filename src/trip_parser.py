@@ -17,19 +17,19 @@ class TripParser:
             page = browser.new_page()
             page.goto(DEPARTURES_URL, timeout=60000)
             
-            # CCPA Banner Removal
-            try:
-                ccpa_wrapper = page.locator("div#wrapper[type='CCPA']")
-                ccpa_ok_button = ccpa_wrapper.locator("button", has_text="Ok")
-
-                if ccpa_ok_button.is_visible(timeout=3000):
-                    logging.info("Clicking CCPA 'Ok' button inside wrapper...")
-                    ccpa_ok_button.click()
-                    page.wait_for_timeout(1000)  # Give time for dismissal animation
-                else:
-                    logging.info("CCPA 'Ok' button not visible.")
-            except Exception as e:
-                logging.info(f"CCPA acceptance not triggered or failed gracefully: {e}")
+            # Handle GDPR and CCPA banners
+            for banner_type in ["GDPR", "CCPA"]:
+                try:
+                    wrapper = page.locator(f"div#wrapper[type='{banner_type}']")
+                    ok_button = wrapper.locator("button", has_text="Ok")
+                    if ok_button.is_visible(timeout=3000):
+                        logging.info(f"Clicking {banner_type} 'Ok' button inside wrapper...")
+                        ok_button.click()
+                        page.wait_for_timeout(1000)
+                    else:
+                        logging.info(f"{banner_type} 'Ok' button not visible.")
+                except Exception as e:
+                    logging.info(f"{banner_type} acceptance not triggered or failed gracefully: {e}")
             
             logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
 
