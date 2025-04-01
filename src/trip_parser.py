@@ -18,15 +18,18 @@ class TripParser:
             page.goto(DEPARTURES_URL, timeout=60000)
             
             # Forcefully dismiss the GDPR/CCPA overlays if they exist in DOM
-            for banner_type in ["GDPR", "CCPA"]:
-                try:
-                    wrapper = page.locator(f"div[type='{banner_type}']")
-                    if wrapper.count() > 0:
-                        logging.info(f"Forcing removal of {banner_type} banner...")
-                        page.evaluate("""el => el.remove()""", wrapper)
-                        page.wait_for_timeout(1000)
-                except Exception as e:
-                    logging.warning(f"Failed to forcibly remove {banner_type} banner: {e}")
+            try:
+                page.evaluate("""
+                    const wrapper = document.querySelector('div[type="GDPR"]#wrapper');
+                    const blocker = wrapper?.querySelector('div[class^="sc-b5ddf3cd-0"]');
+                    if (blocker) {
+                        blocker.remove();
+                        console.log("Removed GDPR blocker element.");
+                    }
+                """)
+                print("Checked and removed GDPR blocker if present.")
+            except Exception as e:
+                print(f"Could not remove GDPR blocker: {e}")
 
             logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
 
