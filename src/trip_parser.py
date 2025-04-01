@@ -21,10 +21,18 @@ class TripParser:
             try:
                 gdpr_overlay = page.locator("#wrapper")
                 if gdpr_overlay.is_visible():
-                    print("GDPR overlay found, removing it...")
-                    page.evaluate("document.getElementById('wrapper')?.remove()")
+                    logging.info("GDPR overlay found. Attempting to remove it...")
+                    page.evaluate("""
+                        const overlay = document.getElementById('wrapper');
+                        if (overlay) {
+                            overlay.remove();
+                        }
+                    """)
+                    # Give it a moment to update DOM
+                    page.wait_for_timeout(1000)
+                    logging.info("Overlay removed.")
             except Exception as e:
-                print(f"GDPR banner not found or not removable: {e}")
+                logging.warning(f"Could not remove GDPR banner: {e}")
             
             logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
 
