@@ -17,23 +17,16 @@ class TripParser:
             page = browser.new_page()
             page.goto(DEPARTURES_URL, timeout=60000)
             
-            # Improved GDPR banner removal
+            # CCPA Banner Removal
             try:
-                gdpr_overlay = page.locator("#wrapper")
-                if gdpr_overlay.is_visible():
-                    logging.info("GDPR overlay found. Attempting to remove it...")
-                    page.evaluate("""
-                        const wrapper = document.getElementById('wrapper');
-                        if (wrapper) {
-                            wrapper.remove();
-                        }
-                        const interceptors = document.querySelectorAll("div[class*='sc-b5ddf3cd-0']");
-                        interceptors.forEach(el => el.remove());
-                    """)
-                    page.wait_for_timeout(1000)
-                    logging.info("Overlay and interceptors removed.")
+                ccpa_wrapper = page.locator("div#wrapper[type='CCPA']")
+                ok_button = ccpa_wrapper.locator("button", has_text="Ok")
+                if ok_button.is_visible():
+                    logging.info("Clicking CCPA 'Ok' button...")
+                    ok_button.click()
             except Exception as e:
-                logging.warning(f"Could not remove GDPR overlay: {e}")
+                logging.info(f"CCPA acceptance not required or failed to click: {e}")
+
             
             logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
 
