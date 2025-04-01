@@ -17,22 +17,23 @@ class TripParser:
             page = browser.new_page()
             page.goto(DEPARTURES_URL, timeout=60000)
             
-            # Try to remove GDPR banner before interacting
+            # Improved GDPR banner removal
             try:
                 gdpr_overlay = page.locator("#wrapper")
                 if gdpr_overlay.is_visible():
                     logging.info("GDPR overlay found. Attempting to remove it...")
                     page.evaluate("""
-                        const overlay = document.getElementById('wrapper');
-                        if (overlay) {
-                            overlay.remove();
+                        const wrapper = document.getElementById('wrapper');
+                        if (wrapper) {
+                            wrapper.remove();
                         }
+                        const interceptors = document.querySelectorAll("div[class*='sc-b5ddf3cd-0']");
+                        interceptors.forEach(el => el.remove());
                     """)
-                    # Give it a moment to update DOM
                     page.wait_for_timeout(1000)
-                    logging.info("Overlay removed.")
+                    logging.info("Overlay and interceptors removed.")
             except Exception as e:
-                logging.warning(f"Could not remove GDPR banner: {e}")
+                logging.warning(f"Could not remove GDPR overlay: {e}")
             
             logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
 
