@@ -16,6 +16,17 @@ class TripParser:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
             page.goto(DEPARTURES_URL, timeout=60000)
+            
+            # Dismiss GDPR overlay if present
+            try:
+                # Adjust selector if needed
+                gdpr_button = page.locator("button:text('Accept All')")  # or 'Accept', or class name
+                if gdpr_button.is_visible():
+                    print("GDPR banner found, clicking to dismiss...")
+                    gdpr_button.click()
+            except Exception as e:
+                print(f"GDPR banner not found or couldn't click: {e}")
+            
             logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
 
             page.wait_for_selector("[class^='hit_container__']", timeout=10000)
