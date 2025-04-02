@@ -16,9 +16,28 @@ class CategoryParser:
         logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
         self.logger = logging.getLogger(__name__)
 
+    def _wait_for_drawer_close(self):
+        # Wait for the drawer wrapper to disappear before continuing
+        try:
+            self.page.wait_for_selector("div.drawer_wrapper__hXH1l", state="detached", timeout=10000)
+        except Exception:
+            self.logger.warning("Drawer did not close in time, proceeding anyway.")
+
+    def _dismiss_cookie_banner(self):
+        # Try clicking the OK button on the cookie banner
+        try:
+            ok_button = self.page.locator("button", has_text="OK")
+            if ok_button.count() > 0:
+                ok_button.first.click()
+                time.sleep(1)
+        except Exception as e:
+            self.logger.warning(f"Cookie banner dismissal failed: {e}")
+
     def fetch_categories(self) -> list[dict[str, Any]]:
         self.logger.info(f"  Navigating to booking page: {self.booking_url}")
         self.page.goto(self.booking_url, timeout=60000)
+
+        self._dismiss_cookie_banner()
 
         try:
             self.page.wait_for_selector("[data-testid='category-card']", timeout=10000)
@@ -38,7 +57,7 @@ class CategoryParser:
                 console.log("Removed known blocker elements.");
             """)
             print("Forced removal of blockers if present.")
-            time.sleep(2)  # Let DOM settle
+            time.sleep(2)
         except Exception as e:
             print(f"Could not remove blockers: {e}")
 
@@ -82,7 +101,7 @@ class CategoryParser:
                 self.page.wait_for_timeout(2000)
 
                 try:
-                    self.page.wait_for_selector("[data-testid='cabin-card']", timeout=5000)
+                    self.page.wait_for_selector("[data-testid='cabin-card']", timeout=20000)
                     cabin_cards = self.page.locator("[data-testid='cabin-card']")
 
                     for j in range(cabin_cards.count()):
@@ -104,6 +123,7 @@ class CategoryParser:
                     if close_button.count() > 0:
                         close_button.first.click()
                         self.page.wait_for_timeout(1000)
+                        self._wait_for_drawer_close()
                 except Exception as e:
                     self.logger.warning(f"Failed to close sidebar: {e}")
 
