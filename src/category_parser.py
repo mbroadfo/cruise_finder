@@ -29,7 +29,7 @@ class CategoryParser:
 
     def _wait_for_drawer_close(self):
         try:
-            self.page.wait_for_function("() => document.querySelector('[data-testid=\\'wrapper\\']') === null", timeout=10000)
+            self.page.wait_for_function("() => document.querySelector('[data-testid=\\'wrapper\\']') === null", timeout=30000)
             self.logger.info("Drawer closed successfully.")
         except Exception as e:
             self.logger.warning(f"Drawer did not close in time: {e}")
