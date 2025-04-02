@@ -1,6 +1,8 @@
 import logging
+import time
 from config import BASE_URL
 from typing import Any
+
 
 class CategoryParser:
     def __init__(self, booking_url: str, page: Any) -> None:
@@ -23,6 +25,21 @@ class CategoryParser:
         except Exception as e:
             self.logger.warning(f"No category cards found: {e}")
             return []
+        
+        # Forcefully dismiss the GDPR blocker if it exists
+        try:
+            self.page.evaluate("""
+                const wrapper = document.querySelector('div[type="GDPR"]#wrapper');
+                const blocker = wrapper?.querySelector('div[class^="sc-b5ddf3cd-0"]');
+                if (blocker) {
+                    blocker.remove();
+                    console.log("Removed GDPR blocker element.");
+                }
+            """)
+            print("Forced removal of GDPR blocker if present.")
+            time.sleep(2)  # Allow time for DOM update
+        except Exception as e:
+            print(f"Could not remove GDPR blocker: {e}")
 
         category_elements = self.page.locator("[data-testid='category-card']")
         category_count = category_elements.count()

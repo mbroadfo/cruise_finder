@@ -1,6 +1,6 @@
 import logging
 from typing import Any
-from time import time
+import time
 from category_parser import CategoryParser
 from departure_parser import fetch_departures
 from config import BASE_URL, DEPARTURES_URL, START_DATE, END_DATE
