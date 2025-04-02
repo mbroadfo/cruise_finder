@@ -16,28 +16,26 @@ class CategoryParser:
         logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
         self.logger = logging.getLogger(__name__)
 
-    def _wait_for_drawer_close(self):
-        # Wait for the drawer wrapper to disappear before continuing
-        try:
-            self.page.wait_for_selector("div.drawer_wrapper__hXH1l", state="detached", timeout=10000)
-        except Exception:
-            self.logger.warning("Drawer did not close in time, proceeding anyway.")
-
     def _dismiss_cookie_banner(self):
-        # Try clicking the OK button on the cookie banner
         try:
-            ok_button = self.page.locator("button", has_text="OK")
+            ok_button = self.page.locator("button[data-style='button']").filter(has_text="OK")
             if ok_button.count() > 0:
-                ok_button.first.click()
+                ok_button.first.click(timeout=5000)
+                self.logger.info("Dismissed cookie consent banner.")
                 time.sleep(1)
         except Exception as e:
             self.logger.warning(f"Cookie banner dismissal failed: {e}")
 
+    def _wait_for_drawer_close(self):
+        try:
+            self.page.wait_for_selector(".drawer_wrapperOpen__wQqHI", state="detached", timeout=10000)
+            self.logger.info("Drawer closed successfully.")
+        except Exception as e:
+            self.logger.warning(f"Drawer did not close in time: {e}")
+
     def fetch_categories(self) -> list[dict[str, Any]]:
         self.logger.info(f"  Navigating to booking page: {self.booking_url}")
         self.page.goto(self.booking_url, timeout=60000)
-
-        self._dismiss_cookie_banner()
 
         try:
             self.page.wait_for_selector("[data-testid='category-card']", timeout=10000)
@@ -57,9 +55,11 @@ class CategoryParser:
                 console.log("Removed known blocker elements.");
             """)
             print("Forced removal of blockers if present.")
-            time.sleep(2)
+            time.sleep(2)  # Let DOM settle
         except Exception as e:
             print(f"Could not remove blockers: {e}")
+
+        self._dismiss_cookie_banner()
 
         see_available_button = self.page.locator("[data-testid='category-card']").nth(4).locator("button").filter(has_text="See available cabins")
         see_available_button.first.click()
@@ -123,9 +123,10 @@ class CategoryParser:
                     if close_button.count() > 0:
                         close_button.first.click()
                         self.page.wait_for_timeout(1000)
-                        self._wait_for_drawer_close()
                 except Exception as e:
                     self.logger.warning(f"Failed to close sidebar: {e}")
+
+                self._wait_for_drawer_close()
 
             if category_status != "Waitlist":
                 self.categories.append({
