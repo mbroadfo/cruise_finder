@@ -30,7 +30,7 @@ class CategoryParser:
         try:
             drawer_locator = self.page.locator("[data-testid='wrapper']")
             self.page.wait_for_function(
-                "(drawers) => Array.from(drawers).every(d => d.offsetParent === null)",
+                "drawers => Array.from(drawers).every(d => d.offsetParent === null)",
                 drawer_locator,
                 timeout=10000
             )
