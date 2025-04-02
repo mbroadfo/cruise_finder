@@ -43,13 +43,15 @@ class CategoryParser:
                 self.logger.warning(f"Fallback close button failed: {click_error}")
 
     def extract_available_cabins_from_drawer(self, page: Page) -> list[str]:
+        seen = set()
         cabin_cards = page.locator("[data-testid='cabin-card']")
         count = cabin_cards.count()
         cabin_numbers = []
         for i in range(count):
             number_elem = cabin_cards.nth(i).locator("p").first
             number_text = number_elem.text_content().strip() if number_elem else ""
-            if number_text:
+            if number_text and number_text not in seen:
+                seen.add(number_text)
                 cabin_numbers.append(number_text)
         return cabin_numbers
 
@@ -121,17 +123,8 @@ class CategoryParser:
                     cabin_numbers = self.extract_available_cabins_from_drawer(self.page)
                     num_cabins = len(cabin_numbers)
                     self.logger.info(f"    {category_name}: {num_cabins} available cabins")
-
                 except Exception as e:
                     self.logger.warning(f"Error fetching available cabins for {category_name}: {e}")
-
-                try:
-                    close_button = self.page.locator("button[data-variant='text'][data-style='link']")
-                    if close_button.count() > 0:
-                        close_button.first.click()
-                        self.page.wait_for_timeout(1000)
-                except Exception as e:
-                    self.logger.warning(f"Failed to close sidebar: {e}")
 
                 self._wait_for_drawer_close()
 
