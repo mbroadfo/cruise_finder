@@ -28,19 +28,29 @@ class CategoryParser:
             self.logger.warning(f"Cookie banner dismissal failed: {e}")
 
     def _wait_for_drawer_close(self):
-        try:
-            self.page.wait_for_function("() => document.querySelector('[data-testid=\\'wrapper\\']') === null", timeout=30000)
-            self.logger.info("Drawer closed successfully.")
-        except Exception as e:
-            self.logger.warning(f"Drawer did not close in time: {e}")
-            self.logger.info("Attempting to click close button as fallback...")
+        def try_wait_for_close(timeout):
             try:
-                close_button = self.page.locator("button[data-variant='text'][data-style='link']")
-                if close_button.count() > 0:
-                    close_button.first.click()
-                    self.page.wait_for_timeout(2000)
-            except Exception as click_error:
-                self.logger.warning(f"Fallback close button failed: {click_error}")
+                self.page.wait_for_function(
+                    "() => document.querySelector('[data-testid=\\'wrapper\\']') === null",
+                    timeout=timeout
+                )
+                self.logger.info("Drawer closed successfully.")
+                return True
+            except Exception as e:
+                self.logger.warning(f"Drawer did not close in time: {e}")
+                return False
+
+        if not try_wait_for_close(15000):
+            self.logger.info("Retrying drawer close check once...")
+            if not try_wait_for_close(10000):
+                self.logger.info("Attempting to click close button as fallback...")
+                try:
+                    close_button = self.page.locator("button[data-variant='text'][data-style='link']")
+                    if close_button.count() > 0:
+                        close_button.first.click()
+                        self.page.wait_for_timeout(2000)
+                except Exception as click_error:
+                    self.logger.warning(f"Fallback close button failed: {click_error}")
 
     def extract_available_cabins_from_drawer(self, page: Page) -> list[str]:
         seen = set()
@@ -117,6 +127,7 @@ class CategoryParser:
             if category_status == "Available":
                 see_available_button.first.click()
                 self.page.wait_for_timeout(2000)
+                self.logger.info(f"Clicked to open drawer for {category_name}.")
 
                 try:
                     self.page.wait_for_selector("[data-testid='cabin-card']", timeout=20000)
