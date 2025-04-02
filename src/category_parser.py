@@ -28,7 +28,12 @@ class CategoryParser:
 
     def _wait_for_drawer_close(self):
         try:
-            self.page.wait_for_selector("[data-testid='wrapper']", state="detached", timeout=20000)
+            drawer_locator = self.page.locator("[data-testid='wrapper']")
+            self.page.wait_for_function(
+                "(drawers) => Array.from(drawers).every(d => d.offsetParent === null)",
+                drawer_locator,
+                timeout=10000
+            )
             self.logger.info("Drawer closed successfully.")
         except Exception as e:
             self.logger.warning(f"Drawer did not close in time: {e}")
