@@ -28,22 +28,18 @@ class CategoryParser:
 
     def _wait_for_drawer_close(self):
         try:
-            drawer_locator = self.page.locator("[data-testid='wrapper']")
-            self.page.wait_for_function(
-                "drawers => Array.from(drawers).every(d => d.offsetParent === null)",
-                drawer_locator,
-                timeout=10000
-            )
+            self.page.wait_for_function("() => document.querySelector('[data-testid=\\'wrapper\\']') === null", timeout=10000)
             self.logger.info("Drawer closed successfully.")
         except Exception as e:
             self.logger.warning(f"Drawer did not close in time: {e}")
+            self.logger.info("Attempting to click close button as fallback...")
             try:
-                self.logger.info("Attempting to click close button as fallback...")
                 close_button = self.page.locator("button[data-variant='text'][data-style='link']")
                 if close_button.count() > 0:
                     close_button.first.click()
-            except Exception as e:
-                self.logger.warning(f"Fallback close click failed: {e}")
+                    self.page.wait_for_timeout(2000)
+            except Exception as click_error:
+                self.logger.warning(f"Fallback close button failed: {click_error}")
 
     def fetch_categories(self) -> list[dict[str, Any]]:
         self.logger.info(f"  Navigating to booking page: {self.booking_url}")
@@ -55,7 +51,6 @@ class CategoryParser:
             self.logger.warning(f"No category cards found: {e}")
             return []
 
-        # Remove GDPR and CCPA blockers if present
         try:
             self.page.evaluate("""
                 const gdpr = document.querySelector('div[type="GDPR"]#wrapper');
@@ -67,7 +62,7 @@ class CategoryParser:
                 console.log("Removed known blocker elements.");
             """)
             print("Forced removal of blockers if present.")
-            time.sleep(2)  # Let DOM settle
+            time.sleep(2)
         except Exception as e:
             print(f"Could not remove blockers: {e}")
 
@@ -131,6 +126,7 @@ class CategoryParser:
                     close_button = self.page.locator("button[data-variant='text'][data-style='link']")
                     if close_button.count() > 0:
                         close_button.first.click()
+                        self.page.wait_for_timeout(1000)
                 except Exception as e:
                     self.logger.warning(f"Failed to close sidebar: {e}")
 
