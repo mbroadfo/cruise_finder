@@ -8,8 +8,7 @@ from playwright.sync_api import sync_playwright
 from secret_event import handle_secret_trip
 
 class TripParser:
-    def __init__(self, page):
-        self.page = page
+    def __init__(self):
         self.logger = logging.getLogger(__name__)
         
     def fetch_trips(self, limit: int = 50) -> list[dict[str, Any]]: # Limit set to 50
