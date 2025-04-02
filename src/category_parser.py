@@ -29,18 +29,15 @@ class CategoryParser:
 
     def extract_available_cabins_from_drawer(self, page: Page) -> list[str]:
         seen = set()
-        cabin_cards = page.locator("[data-testid='cabin-card']")
-        count = cabin_cards.count()
+        cabin_number_elements = page.locator("div.sc-8e2cda1b-0.eWKRHM p.sc-8e2cda1b-3")
+        count = cabin_number_elements.count()
         cabin_numbers = []
         for i in range(count):
-            number_elem = cabin_cards.nth(i).locator("p").first
-            try:
-                number_text = number_elem.text_content().strip() if number_elem else ""
-                if number_text and number_text not in seen and number_text.isdigit():
-                    seen.add(number_text)
-                    cabin_numbers.append(number_text)
-            except Exception as e:
-                self.logger.warning(f"Could not parse cabin number at index {i}: {e}")
+            elem = cabin_number_elements.nth(i)
+            number_text = elem.text_content().strip() if elem else ""
+            if number_text and number_text not in seen and number_text.isdigit():
+                seen.add(number_text)
+                cabin_numbers.append(number_text)
         return cabin_numbers
 
     def fetch_categories(self) -> list[dict[str, Any]]:
