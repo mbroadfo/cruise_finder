@@ -26,20 +26,23 @@ class CategoryParser:
             self.logger.warning(f"No category cards found: {e}")
             return []
         
-        # Forcefully dismiss the GDPR blocker before any interactions
+        # Remove GDPR and CCPA blockers if present
         try:
             self.page.evaluate("""
-                const wrapper = document.querySelector('div[type="GDPR"]#wrapper');
-                const blocker = wrapper?.querySelector('div[class^="sc-b5ddf3cd-0"]');
-                if (blocker) {
-                    blocker.remove();
-                    console.log("Removed GDPR blocker element.");
-                }
+                // GDPR blocker
+                const gdpr = document.querySelector('div[type="GDPR"]#wrapper');
+                gdpr?.remove();
+
+                // CCPA cookie blocker
+                const ccpa = document.querySelector('div[type="CCPA"]#wrapper');
+                ccpa?.remove();
+
+                console.log("Removed known blocker elements.");
             """)
-            print("Forced removal of GDPR blocker if present.")
+            print("Forced removal of blockers if present.")
             time.sleep(2)  # Let DOM settle
         except Exception as e:
-            print(f"Could not remove GDPR blocker: {e}")
+            print(f"Could not remove blockers: {e}")
 
         # Existing category fetching logic continues here...
         see_available_button = self.page.locator("[data-testid='category-card']").nth(4).locator("button").filter(has_text="See available cabins")
