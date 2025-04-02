@@ -40,7 +40,7 @@ class CategoryParser:
                 self.logger.warning(f"Drawer did not close in time: {e}")
                 return False
 
-        if not try_wait_for_close(15000):
+        if not try_wait_for_close(30000):
             self.logger.info("Retrying drawer close check once...")
             if not try_wait_for_close(10000):
                 self.logger.info("Attempting to click close button as fallback...")
