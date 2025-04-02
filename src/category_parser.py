@@ -28,7 +28,7 @@ class CategoryParser:
 
     def _wait_for_drawer_close(self):
         try:
-            self.page.wait_for_selector(".drawer_wrapperOpen__wQqHI", state="detached", timeout=10000)
+            self.page.wait_for_selector("[data-testid='wrapper']", state="detached", timeout=10000)
             self.logger.info("Drawer closed successfully.")
         except Exception as e:
             self.logger.warning(f"Drawer did not close in time: {e}")
@@ -122,7 +122,6 @@ class CategoryParser:
                     close_button = self.page.locator("button[data-variant='text'][data-style='link']")
                     if close_button.count() > 0:
                         close_button.first.click()
-                        self.page.wait_for_timeout(1000)
                 except Exception as e:
                     self.logger.warning(f"Failed to close sidebar: {e}")
 
