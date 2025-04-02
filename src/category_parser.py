@@ -64,10 +64,10 @@ class CategoryParser:
 
                 console.log("Removed known blocker elements.");
             """)
-            print("Forced removal of blockers if present.")
+            self.logger.info("Forced removal of blockers if present.")
             time.sleep(2)
         except Exception as e:
-            print(f"Could not remove blockers: {e}")
+            self.logger.info(f"Could not remove blockers: {e}")
 
         self._dismiss_cookie_banner()
 

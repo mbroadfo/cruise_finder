@@ -35,10 +35,10 @@ class TripParser:
                         }
                     }
                 """)
-                print("Forced removal of GDPR blocker if present.")
+                self.logger.info("Forced removal of GDPR blocker if present.")
                 time.sleep(2)  # Give time for DOM update
             except Exception as e:
-                print(f"Could not remove GDPR blocker: {e}")
+                self.logger.info(f"Could not remove GDPR blocker: {e}")
 
             trip_elements = page.locator("[class^='hit_container__']")
             total_loaded = trip_elements.count()
