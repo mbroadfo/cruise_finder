@@ -27,31 +27,6 @@ class CategoryParser:
         except Exception as e:
             self.logger.warning(f"Cookie banner dismissal failed: {e}")
 
-    def _wait_for_drawer_close(self):
-        def try_wait_for_close(timeout):
-            try:
-                self.page.wait_for_function(
-                    "() => document.querySelector('[data-testid=\\'wrapper\\']') === null",
-                    timeout=timeout
-                )
-                self.logger.info("Drawer closed successfully.")
-                return True
-            except Exception as e:
-                self.logger.warning(f"Drawer did not close in time: {e}")
-                return False
-
-        if not try_wait_for_close(30000):
-            self.logger.info("Retrying drawer close check once...")
-            if not try_wait_for_close(10000):
-                self.logger.info("Attempting to click close button as fallback...")
-                try:
-                    close_button = self.page.locator("button[data-variant='text'][data-style='link']")
-                    if close_button.count() > 0:
-                        close_button.first.click()
-                        self.page.wait_for_timeout(2000)
-                except Exception as click_error:
-                    self.logger.warning(f"Fallback close button failed: {click_error}")
-
     def extract_available_cabins_from_drawer(self, page: Page) -> list[str]:
         seen = set()
         cabin_cards = page.locator("[data-testid='cabin-card']")
@@ -137,7 +112,13 @@ class CategoryParser:
                 except Exception as e:
                     self.logger.warning(f"Error fetching available cabins for {category_name}: {e}")
 
-                self._wait_for_drawer_close()
+                try:
+                    close_button = self.page.locator("button[data-variant='text'][data-style='link']")
+                    if close_button.count() > 0:
+                        close_button.first.click()
+                        self.page.wait_for_timeout(2000)
+                except Exception as click_error:
+                    self.logger.warning(f"Fallback close button failed: {click_error}")
 
             if category_status != "Waitlist":
                 self.categories.append({
