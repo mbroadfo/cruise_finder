@@ -2,6 +2,7 @@ import logging
 import time
 from config import BASE_URL
 from typing import Any
+from playwright.sync_api import Page
 
 
 class CategoryParser:
@@ -28,11 +29,7 @@ class CategoryParser:
 
     def _wait_for_drawer_close(self):
         try:
-            # First try waiting for the drawer to close based on the class no longer including 'open'
-            self.page.wait_for_function(
-                "() => !document.querySelector('[data-testid=\\'wrapper\\']')?.classList.contains('drawer_wrapperOpen__wQqHI')",
-                timeout=5000
-            )
+            self.page.wait_for_function("() => document.querySelector('[data-testid=\\'wrapper\\']') === null", timeout=10000)
             self.logger.info("Drawer closed successfully.")
         except Exception as e:
             self.logger.warning(f"Drawer did not close in time: {e}")
@@ -41,9 +38,20 @@ class CategoryParser:
                 close_button = self.page.locator("button[data-variant='text'][data-style='link']")
                 if close_button.count() > 0:
                     close_button.first.click()
-                    self.page.wait_for_timeout(1000)  # Let the drawer finish closing
-            except Exception as close_err:
-                self.logger.warning(f"Fallback drawer close failed: {close_err}")
+                    self.page.wait_for_timeout(2000)
+            except Exception as click_error:
+                self.logger.warning(f"Fallback close button failed: {click_error}")
+
+    def extract_available_cabins_from_drawer(self, page: Page) -> list[str]:
+        cabin_cards = page.locator("[data-testid='cabin-card']")
+        count = cabin_cards.count()
+        cabin_numbers = []
+        for i in range(count):
+            number_elem = cabin_cards.nth(i).locator("p").first
+            number_text = number_elem.text_content().strip() if number_elem else ""
+            if number_text:
+                cabin_numbers.append(number_text)
+        return cabin_numbers
 
     def fetch_categories(self) -> list[dict[str, Any]]:
         self.logger.info(f"  Navigating to booking page: {self.booking_url}")
@@ -110,16 +118,7 @@ class CategoryParser:
 
                 try:
                     self.page.wait_for_selector("[data-testid='cabin-card']", timeout=20000)
-                    cabin_cards = self.page.locator("[data-testid='cabin-card']")
-
-                    for j in range(cabin_cards.count()):
-                        card = cabin_cards.nth(j)
-                        number_elem = card.locator("p").first
-                        if number_elem.count() > 0:
-                            number_text = number_elem.text_content().strip()
-                            if number_text.isdigit():
-                                cabin_numbers.append(number_text)
-
+                    cabin_numbers = self.extract_available_cabins_from_drawer(self.page)
                     num_cabins = len(cabin_numbers)
                     self.logger.info(f"    {category_name}: {num_cabins} available cabins")
 
