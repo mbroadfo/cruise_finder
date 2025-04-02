@@ -108,7 +108,7 @@ class CategoryParser:
                     self.page.wait_for_selector("[data-testid='cabin-card']", timeout=20000)
                     cabin_numbers = self.extract_available_cabins_from_drawer(self.page)
                     num_cabins = len(cabin_numbers)
-                    self.logger.info(f"    {category_name}: {num_cabins} available cabins")
+                    self.logger.info(f"    {category_name}: {num_cabins} available cabins ({', '.join(cabin_numbers)})")
                 except Exception as e:
                     self.logger.warning(f"Error fetching available cabins for {category_name}: {e}")
 
