@@ -34,10 +34,13 @@ class CategoryParser:
         cabin_numbers = []
         for i in range(count):
             number_elem = cabin_cards.nth(i).locator("p").first
-            number_text = number_elem.text_content().strip() if number_elem else ""
-            if number_text and number_text not in seen:
-                seen.add(number_text)
-                cabin_numbers.append(number_text)
+            try:
+                number_text = number_elem.text_content().strip() if number_elem else ""
+                if number_text and number_text not in seen and number_text.isdigit():
+                    seen.add(number_text)
+                    cabin_numbers.append(number_text)
+            except Exception as e:
+                self.logger.warning(f"Could not parse cabin number at index {i}: {e}")
         return cabin_numbers
 
     def fetch_categories(self) -> list[dict[str, Any]]:

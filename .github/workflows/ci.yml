@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-  workflow_dispatch:  # Allows manual trigger in GitHub UI
+  workflow_dispatch:
 
 jobs:
   build-and-push:
@@ -25,18 +25,22 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
+    - name: 🏷️ Extract Git Commit SHA
+      id: vars
+      run: echo "GIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
     - name: 🛠️ Build Docker image
       run: |
-        IMAGE_TAG=${{ github.sha }}
+        IMAGE_TAG=$GIT_SHA
         REPO=${{ secrets.ECR_REPOSITORY }}
 
         docker build -t $REPO:$IMAGE_TAG .
-        docker tag $REPO:$IMAGE_TAG $REPO:latest  # Add this line
+        docker tag $REPO:$IMAGE_TAG $REPO:latest
 
     - name: 🚀 Push image to ECR
       run: |
-        IMAGE_TAG=${{ github.sha }}
+        IMAGE_TAG=$GIT_SHA
         REPO=${{ secrets.ECR_REPOSITORY }}
 
         docker push $REPO:$IMAGE_TAG
-        docker push $REPO:latest  # Add this line
+        docker push $REPO:latest
