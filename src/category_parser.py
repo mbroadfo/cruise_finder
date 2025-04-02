@@ -26,7 +26,7 @@ class CategoryParser:
             self.logger.warning(f"No category cards found: {e}")
             return []
         
-        # Forcefully dismiss the GDPR blocker if it exists
+        # Forcefully dismiss the GDPR blocker before any interactions
         try:
             self.page.evaluate("""
                 const wrapper = document.querySelector('div[type="GDPR"]#wrapper');
@@ -37,9 +37,13 @@ class CategoryParser:
                 }
             """)
             print("Forced removal of GDPR blocker if present.")
-            time.sleep(2)  # Allow time for DOM update
+            time.sleep(2)  # Let DOM settle
         except Exception as e:
             print(f"Could not remove GDPR blocker: {e}")
+
+        # Existing category fetching logic continues here...
+        see_available_button = self.page.locator("[data-testid='category-card']").nth(4).locator("button").filter(has_text="See available cabins")
+        see_available_button.first.click()
 
         category_elements = self.page.locator("[data-testid='category-card']")
         category_count = category_elements.count()
