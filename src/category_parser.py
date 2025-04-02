@@ -61,9 +61,6 @@ class CategoryParser:
 
         self._dismiss_cookie_banner()
 
-        see_available_button = self.page.locator("[data-testid='category-card']").nth(4).locator("button").filter(has_text="See available cabins")
-        see_available_button.first.click()
-
         category_elements = self.page.locator("[data-testid='category-card']")
         category_count = category_elements.count()
         self.logger.info(f"  Found {category_count} cabin categories.")
