@@ -68,7 +68,13 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_attach" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Custom permissions for secrets + S3
+# Attach custom secrets + S3 policy to execution role too
+resource "aws_iam_role_policy_attachment" "ecs_execution_access_attach" {
+  role       = aws_iam_role.ecs_task_execution.name
+  policy_arn = aws_iam_policy.ecs_task_access.arn
+}
+
+# Custom permissions for secrets + S3 + CloudFront
 resource "aws_iam_policy" "ecs_task_access" {
   name = "ecs-cruise-finder-task-access"
 
@@ -79,7 +85,8 @@ resource "aws_iam_policy" "ecs_task_access" {
         Effect : "Allow",
         Action : [
           "secretsmanager:GetSecretValue",
-          "s3:PutObject"
+          "s3:PutObject",
+          "cloudfront:CreateInvalidation"
         ],
         Resource : "*"
       }
@@ -110,40 +117,35 @@ resource "aws_iam_role_policy_attachment" "ecs_task_custom_attach" {
 }
 
 # --------------------------------------
+# Additional Policy for CloudFront Invalidation
+# --------------------------------------
+resource "aws_iam_policy" "cloudfront_invalidation" {
+  name = "cloudfront-invalidation-policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "cloudfront:CreateInvalidation"
+        ],
+        Resource = "arn:aws:cloudfront::491696534851:distribution/E22G95LIEIJY6O"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "cloudfront_attach" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = aws_iam_policy.cloudfront_invalidation.arn
+}
+
+# --------------------------------------
 # ECS Cluster
 # --------------------------------------
 resource "aws_ecs_cluster" "cruise_cluster" {
   name = "cruise-finder-cluster"
-}
-
-# --------------------------------------
-# ECS Task Definition
-# --------------------------------------
-resource "aws_ecs_task_definition" "cruise_task" {
-  family                   = "cruise-finder-task"
-  cpu                      = "512"
-  memory                   = "1024"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-
-  execution_role_arn = aws_iam_role.ecs_task_execution.arn
-  task_role_arn      = aws_iam_role.ecs_task_role.arn
-
-  container_definitions = jsonencode([
-    {
-      name      = "cruise-finder",
-      image     = "${aws_ecr_repository.cruise_finder.repository_url}:latest",
-      essential = true,
-      logConfiguration = {
-        logDriver = "awslogs",
-        options = {
-          awslogs-group         = aws_cloudwatch_log_group.ecs_logs.name,
-          awslogs-region        = var.aws_region,
-          awslogs-stream-prefix = "ecs"
-        }
-      }
-    }
-  ])
 }
 
 # --------------------------------------
@@ -176,27 +178,31 @@ resource "aws_ecr_lifecycle_policy" "cruise_cleanup" {
 resource "aws_ecs_task_definition" "cruise_finder_task" {
   family                   = "cruise-finder-task"
   requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
   cpu                      = "512"
   memory                   = "1024"
-  network_mode             = "awsvpc"
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
-  task_role_arn            = aws_iam_role.ecs_task_execution.arn  # Assuming same role handles secrets & S3
+  task_role_arn            = aws_iam_role.ecs_task_execution.arn
 
   container_definitions = jsonencode([
     {
-      name      = "cruise-finder"
-      image     = "${aws_ecr_repository.cruise_finder.repository_url}:latest"
-      essential = true
+      name      = "cruise-finder",
+      image     = "${aws_ecr_repository.cruise_finder.repository_url}:latest",
+      essential = true,
       logConfiguration = {
-        logDriver = "awslogs"
+        logDriver = "awslogs",
         options = {
-          awslogs-group         = aws_cloudwatch_log_group.ecs_logs.name
-          awslogs-region        = var.aws_region
+          awslogs-group         = "/ecs/cruise-finder",
+          awslogs-region        = "us-west-2",
           awslogs-stream-prefix = "ecs"
         }
       }
     }
   ])
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # --------------------------------------
