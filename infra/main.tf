@@ -210,7 +210,9 @@ resource "aws_ecs_task_definition" "cruise_finder_task" {
 # --------------------------------------
 resource "aws_cloudwatch_event_rule" "daily_cruise_finder" {
   name                = "run-cruise-finder-daily"
-  schedule_expression = "rate(1 day)"
+  description         = "Runs cruise-finder ECS task every day at 5:00 AM UTC"
+  schedule_expression = "cron(0 11 * * ? *)"  # 5:00 AM MT daily
+  state               = "ENABLED"
 }
 
 # --------------------------------------
@@ -257,7 +259,7 @@ resource "aws_cloudwatch_event_target" "run_task" {
   rule      = aws_cloudwatch_event_rule.daily_cruise_finder.name
   role_arn  = aws_iam_role.eventbridge_invoke_ecs.arn
   target_id = "CruiseFinderTask"
-  arn       = aws_ecs_cluster.cruise_cluster.arn  # This stays here
+  arn       = aws_ecs_cluster.cruise_cluster.arn
 
   ecs_target {
     launch_type         = "FARGATE"
