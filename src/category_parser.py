@@ -17,7 +17,7 @@ class CategoryParser:
         logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
         self.logger = logging.getLogger(__name__)
 
-    def _dismiss_cookie_banner(self):
+    def _dismiss_cookie_banner(self) -> None:
         try:
             ok_button = self.page.locator("button[data-style='button']").filter(has_text="OK")
             if ok_button.count() > 0:
@@ -36,7 +36,8 @@ class CategoryParser:
             card = cabin_cards.nth(i)
             candidate = card.locator("p")
             for j in range(candidate.count()):
-                text = candidate.nth(j).text_content().strip()
+                text_raw = candidate.nth(j).text_content()
+                text = text_raw.strip() if text_raw else ""
                 if text.isdigit() and text not in seen:
                     seen.add(text)
                     cabin_numbers.append(text)
@@ -84,8 +85,10 @@ class CategoryParser:
             cabin_type_locator = pax_icons.nth(pax_icons.count() - 1).locator("+ span")
             price_locator = category.locator("h2")
 
-            deck = deck_locator.text_content().strip() if deck_locator.count() > 0 else "Unknown"
-            category_name = category_name_locator.text_content().strip() if category_name_locator.count() > 0 else "Unknown"
+            deck_raw = deck_locator.text_content() if deck_locator.count() > 0 else None
+            deck = deck_raw.strip() if deck_raw else "Unknown"
+            category_name_raw = category_name_locator.text_content() if category_name_locator.count() > 0 else None
+            category_name = category_name_raw.strip() if category_name_raw else "Unknown"
             occupancy = f"{pax_icons.count()} Person(s)" if pax_icons.count() > 0 else "Unknown"
             cabin_type = cabin_type_locator.text_content().strip() if cabin_type_locator.count() > 0 else "Unknown"
             price = price_locator.text_content().strip() if price_locator.count() > 0 else "Unknown"

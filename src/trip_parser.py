@@ -8,7 +8,7 @@ from playwright.sync_api import sync_playwright
 from secret_event import handle_secret_trip
 
 class TripParser:
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
         
     def fetch_trips(self, limit: int = 50) -> list[dict[str, Any]]: # Limit set to 50
@@ -65,35 +65,42 @@ class TripParser:
             logging.info(f"Processing {trip_count} trips.")
 
             for i in range(trip_count):
-                trip = trip_elements.nth(i)
-                trip_name_locator = trip.locator("[class^='card_name__']")
+                trip_element = trip_elements.nth(i)
+                trip_name_locator = trip_element.locator("[class^='card_name__']")
                 if trip_name_locator.count() == 0:
                     continue
 
-                trip_name = trip_name_locator.text_content().strip()
-                trip_url = trip_name_locator.get_attribute("href")
+                trip_name_raw = trip_name_locator.text_content()
+                trip_name = trip_name_raw.strip() if trip_name_raw else "Unnamed Trip"
+
+                trip_url = trip_name_locator.get_attribute("href") or ""
                 full_trip_url = f"{BASE_URL}{trip_url}" if trip_url else "No URL Available"
+
 
                 logging.info(f"[Trip {i+1}/{trip_count}] - Processing \"{trip_name}\" (URL: {full_trip_url})")
 
                 # Extract image URL
-                image_locator = trip.locator("img[class^='card_image__']")
+                image_locator = trip_element.locator("img[class^='card_image__']")
                 image_url = image_locator.get_attribute("src") if image_locator.count() > 0 else ""
 
                 # Extract destination tags
-                dest_spans = trip.locator("div[class^='card_list__'] span[class^='card_destination__']")
-                destinations = [dest_spans.nth(j).text_content().strip() for j in range(dest_spans.count())]
+                dest_spans = trip_element.locator("div[class^='card_list__'] span[class^='card_destination__']")
+                destinations = []
+                for j in range(dest_spans.count()):
+                    text = dest_spans.nth(j).text_content()
+                    if text:
+                        destinations.append(text.strip())
                 destination_str = "|".join(destinations)
 
                 # Detect hidden trips
-                hidden_trip_locator = trip.locator("[class^='card_displayNone']")
+                hidden_trip_locator = trip_element.locator("[class^='card_displayNone']")
                 is_hidden_trip = hidden_trip_locator.count() > 0
 
                 if is_hidden_trip:
                     logging.info(f"🚨 Detected hidden trip: {trip_name}, triggering secret event handler.")
                     departures = handle_secret_trip(page, full_trip_url)
                 else:
-                    departures = fetch_departures(page, trip)
+                    departures = fetch_departures(page, trip_element)
 
                 trips.append({
                     "trip_name": trip_name,

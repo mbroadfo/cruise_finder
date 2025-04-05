@@ -6,7 +6,7 @@ BASE_URL = "https://www.expeditions.com"
 
 # Default date range for testing
 START_DATE = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-END_DATE = (datetime.now() + timedelta(days=120)).strftime("%Y-%m-%d")
+END_DATE = (datetime.now() + timedelta(days=165)).strftime("%Y-%m-%d")
 
 # Override date range for testing
 #START_DATE = "2025-04-01"

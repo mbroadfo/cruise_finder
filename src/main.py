@@ -6,7 +6,7 @@ from save_trips import save_to_json
 from aws_secrets import inject_env_from_secrets
 inject_env_from_secrets("cruise-finder-secrets")
 
-def invalidate_cloudfront_cache(distribution_id: str, paths: list[str]):
+def invalidate_cloudfront_cache(distribution_id: str, paths: list[str]) -> None:
     client = boto3.client('cloudfront')
     response = client.create_invalidation(
         DistributionId=distribution_id,
