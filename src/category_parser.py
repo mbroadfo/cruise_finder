@@ -2,8 +2,7 @@ import logging
 import time
 from config import BASE_URL
 from typing import Any
-from playwright.sync_api import Page
-
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
 class CategoryParser:
     def __init__(self, booking_url: str, page: Any) -> None:
@@ -47,7 +46,19 @@ class CategoryParser:
 
     def fetch_categories(self) -> list[dict[str, Any]]:
         self.logger.info(f"  Navigating to booking page: {self.booking_url}")
-        self.page.goto(self.booking_url, timeout=60000)
+        MAX_RETRIES = 3
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                self.page.goto(self.booking_url, timeout=60000)
+                break  # success
+            except PlaywrightTimeoutError as e:
+                self.logger.warning(f"⏳ Timeout loading {self.booking_url} (attempt {attempt}/{MAX_RETRIES})")
+                if attempt == MAX_RETRIES:
+                    self.logger.error(f"❌ Failed after {MAX_RETRIES} attempts: {self.booking_url}")
+                    raise e
+                backoff = 2 ** attempt
+                self.logger.info(f"🔁 Retrying in {backoff}s...")
+                time.sleep(backoff)
 
         try:
             self.page.wait_for_selector("[data-testid='category-card']", timeout=10000)
