@@ -1,5 +1,5 @@
-# Use AWS Python image
-FROM public.ecr.aws/lambda/python:3.9
+# Use official Python image
+FROM python:3.11-slim
 
 
 # Set working directory
