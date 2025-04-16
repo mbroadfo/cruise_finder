@@ -1,11 +1,10 @@
 import json
 import os
-from admin.auth0_utils import get_m2m_token, get_all_users
+from admin.auth0_utils import list_users
 
 def lambda_handler(event, context):
     try:
-        token = get_m2m_token()
-        users = get_all_users(token)
+        users = list_users()
 
         return {
             "statusCode": 200,
