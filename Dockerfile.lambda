@@ -1,0 +1,12 @@
+FROM public.ecr.aws/lambda/python:3.9
+
+# Copy your function code
+COPY lambdas/list_users.py ${LAMBDA_TASK_ROOT}
+COPY admin ${LAMBDA_TASK_ROOT}/admin
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install -r requirements.txt --target "${LAMBDA_TASK_ROOT}"
+
+# Set the CMD to your function's handler
+CMD ["list_users.lambda_handler"]
