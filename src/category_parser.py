@@ -28,7 +28,7 @@ class CategoryParser:
 
     def extract_available_cabins_from_drawer(self, page: Page) -> list[str]:
         seen = set()
-        cabin_cards = page.locator("div[data-testid='cabin-card']")
+        cabin_cards = page.locator("[data-testid='cabin-card']")
         cabin_numbers = []
 
         for i in range(cabin_cards.count()):
@@ -40,7 +40,7 @@ class CategoryParser:
                 if text.isdigit() and text not in seen:
                     seen.add(text)
                     cabin_numbers.append(text)
-                    break  # Assuming only one cabin number per card
+                    # break removed to allow collection of multiple cabin numbers per card
 
         return cabin_numbers
 
@@ -118,8 +118,9 @@ class CategoryParser:
             cabin_numbers: list[str] = []
 
             if category_status == "Available":
+                see_available_button.first.scroll_into_view_if_needed()
                 see_available_button.first.click()
-                self.page.wait_for_timeout(2000)
+                self.page.wait_for_timeout(6000)
                 self.logger.info(f"Clicked to open drawer for {category_name}.")
 
                 try:
@@ -134,7 +135,7 @@ class CategoryParser:
                     close_button = self.page.locator("button[data-variant='text'][data-style='link']")
                     if close_button.count() > 0:
                         close_button.first.click()
-                        self.page.wait_for_timeout(2000)
+                        self.page.wait_for_timeout(6000)
                 except Exception as click_error:
                     self.logger.warning(f"Fallback close button failed: {click_error}")
 

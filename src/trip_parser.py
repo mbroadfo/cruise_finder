@@ -22,6 +22,7 @@ class TripParser:
             page.goto(DEPARTURES_URL, timeout=60000)
             
             logging.info(f"Loaded Departures page for {START_DATE} to {END_DATE}")
+            logging.info(f"{DEPARTURES_URL}")
 
             page.wait_for_selector("[class^='hit_container__']", timeout=10000)
             
