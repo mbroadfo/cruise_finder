@@ -172,43 +172,15 @@ resource "aws_ecr_lifecycle_policy" "cruise_cleanup" {
   })
 }
 
-# --------------------------------------
-# ECS Task Definition (Fargate)
-# --------------------------------------
-resource "aws_ecs_task_definition" "cruise_finder_task" {
-  family                   = "cruise-finder-task"
-  requires_compatibilities = ["FARGATE"]
-  network_mode             = "awsvpc"
-  cpu                      = "512"
-  memory                   = "1024"
-  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
-  task_role_arn            = aws_iam_role.ecs_task_execution.arn
+########################################
+# ECS Task Definition (Hardcoded ARN)
+########################################
 
-  container_definitions = jsonencode([
-    {
-      name      = "cruise-finder",
-      image     = "${aws_ecr_repository.cruise_finder.repository_url}:latest",
-      essential = true,
-      logConfiguration = {
-        logDriver = "awslogs",
-        options = {
-          awslogs-group         = "/ecs/cruise-finder",
-          awslogs-region        = "us-west-2",
-          awslogs-stream-prefix = "ecs"
-        }
-      }
-    }
-  ])
+# Removed aws_ecs_task_definition.cruise_finder_task
 
-  lifecycle {
-    create_before_destroy = true
-  }
-  track_latest = true
-}
-
-# --------------------------------------
+########################################
 # CloudWatch Scheduled Event
-# --------------------------------------
+########################################
 resource "aws_cloudwatch_event_rule" "daily_cruise_finder" {
   name                = "run-cruise-finder-daily"
   description         = "Runs cruise-finder ECS task every day at 5:00 AM UTC"
@@ -216,9 +188,9 @@ resource "aws_cloudwatch_event_rule" "daily_cruise_finder" {
   state               = "ENABLED"
 }
 
-# --------------------------------------
+########################################
 # IAM Role to allow EventBridge to run ECS task
-# --------------------------------------
+########################################
 resource "aws_iam_role" "eventbridge_invoke_ecs" {
   name = "eventbridgeECSInvokeRole"
 
@@ -253,9 +225,9 @@ resource "aws_iam_role_policy" "eventbridge_invoke_ecs_policy" {
   })
 }
 
-# --------------------------------------
+########################################
 # Event Target that runs ECS task
-# --------------------------------------
+########################################
 resource "aws_cloudwatch_event_target" "run_task" {
   rule      = aws_cloudwatch_event_rule.daily_cruise_finder.name
   role_arn  = aws_iam_role.eventbridge_invoke_ecs.arn
@@ -265,11 +237,12 @@ resource "aws_cloudwatch_event_target" "run_task" {
   ecs_target {
     launch_type         = "FARGATE"
     platform_version    = "LATEST"
-    task_definition_arn = aws_ecs_task_definition.cruise_finder_task.arn
+    task_definition_arn = "arn:aws:ecs:us-west-2:491696534851:task-definition/cruise-finder-task:72"  # <-- PINNED manually
+
     network_configuration {
-      subnets         = [var.subnet_id]
+      subnets          = [var.subnet_id]
       assign_public_ip = true
-      security_groups = [var.security_group_id]
+      security_groups  = [var.security_group_id]
     }
   }
 }
