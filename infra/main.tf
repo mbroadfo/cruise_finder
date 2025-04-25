@@ -203,6 +203,7 @@ resource "aws_ecs_task_definition" "cruise_finder_task" {
   lifecycle {
     create_before_destroy = true
   }
+  track_latest = true
 }
 
 # --------------------------------------
@@ -271,107 +272,4 @@ resource "aws_cloudwatch_event_target" "run_task" {
       security_groups = [var.security_group_id]
     }
   }
-}
-
-# --------------------------------------
-# Lambda Execution Role
-# --------------------------------------
-resource "aws_iam_role" "lambda_exec" {
-  name = "lambda_exec_role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Principal = {
-        Service = "lambda.amazonaws.com"
-      }
-      Effect = "Allow"
-      Sid    = ""
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role       = aws_iam_role.lambda_exec.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-# --------------------------------------
-# Lambda Role ECR Read Access
-# --------------------------------------
-resource "aws_iam_role_policy_attachment" "lambda_ecr_read" {
-  role       = aws_iam_role.lambda_exec.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-}
-
-# --------------------------------------
-# Lambda ECR Auth Token Access
-# --------------------------------------
-resource "aws_iam_role_policy" "lambda_ecr_auth" {
-  name = "lambda-ecr-auth"
-  role = aws_iam_role.lambda_exec.id
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "ecr:GetAuthorizationToken"
-        ],
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-# --------------------------------------
-# Define the Lambda Function
-# --------------------------------------
-resource "aws_lambda_function" "list_users" {
-  function_name = "list-users"
-  role          = aws_iam_role.lambda_exec.arn
-  package_type  = "Image"
-  image_uri     = "491696534851.dkr.ecr.us-west-2.amazonaws.com/list-users:latest"
-  timeout       = 30
-}
-
-# --------------------------------------
-# API Gateway HTTP API
-# --------------------------------------
-resource "aws_apigatewayv2_api" "lambda_api" {
-  name          = "lambda-api"
-  protocol_type = "HTTP"
-}
-
-# --------------------------------------
-# API Gateway Integration
-# --------------------------------------
-resource "aws_apigatewayv2_integration" "list_users" {
-  api_id                 = aws_apigatewayv2_api.lambda_api.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.list_users.invoke_arn
-  integration_method     = "POST"
-  payload_format_version = "2.0"
-}
-
-# --------------------------------------
-# API Gateway Route
-# --------------------------------------
-resource "aws_apigatewayv2_route" "list_users" {
-  api_id    = aws_apigatewayv2_api.lambda_api.id
-  route_key = "GET /list-users"
-  target    = "integrations/${aws_apigatewayv2_integration.list_users.id}"
-}
-
-# --------------------------------------
-# Lambda Permission
-# --------------------------------------
-resource "aws_lambda_permission" "apigw_list_users" {
-  statement_id  = "AllowAPIGatewayInvokeListUsers"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.list_users.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.lambda_api.execution_arn}/*/*"
 }
