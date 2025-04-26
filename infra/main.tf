@@ -184,7 +184,7 @@ resource "aws_ecr_lifecycle_policy" "cruise_cleanup" {
 resource "aws_cloudwatch_event_rule" "daily_cruise_finder" {
   name                = "run-cruise-finder-daily"
   description         = "Runs cruise-finder ECS task every day at 5:00 AM UTC"
-  schedule_expression = "cron(0 11 1/4 * ? *)"  # 5:00 AM MT daily
+  schedule_expression = "cron(0 11 1/2 * ? *)"  # 5:00 AM MT daily
   state               = "ENABLED"
 }
 
