@@ -24,7 +24,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
     parser = TripParser()
-    trips = parser.fetch_trips(limit=50)
+    trips = parser.fetch_trips(limit=100)
 
     if trips:
         save_to_json(trips)  # Save JSON first
