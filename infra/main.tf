@@ -39,7 +39,7 @@ resource "aws_ecr_repository" "cruise_finder" {
 # --------------------------------------
 resource "aws_cloudwatch_log_group" "ecs_logs" {
   name              = "/ecs/cruise-finder"
-  retention_in_days = 1
+  retention_in_days = 7
 }
 
 # --------------------------------------
@@ -184,7 +184,7 @@ resource "aws_ecr_lifecycle_policy" "cruise_cleanup" {
 resource "aws_cloudwatch_event_rule" "daily_cruise_finder" {
   name                = "run-cruise-finder-daily"
   description         = "Runs cruise-finder ECS task every day at 5:00 AM UTC"
-  schedule_expression = "cron(0 11 1/2 * ? *)"  # 5:00 AM MT daily
+  schedule_expression = "cron(0 11 * * ? *)"  # 5:00 AM MT daily
   state               = "ENABLED"
 }
 
@@ -237,7 +237,7 @@ resource "aws_cloudwatch_event_target" "run_task" {
   ecs_target {
     launch_type         = "FARGATE"
     platform_version    = "LATEST"
-    task_definition_arn = "arn:aws:ecs:us-west-2:491696534851:task-definition/cruise-finder-task:72"  # <-- PINNED manually
+    task_definition_arn = "arn:aws:ecs:us-west-2:491696534851:task-definition/cruise-finder-task:73"  # <-- PINNED manually
 
     network_configuration {
       subnets          = [var.subnet_id]
@@ -245,4 +245,43 @@ resource "aws_cloudwatch_event_target" "run_task" {
       security_groups  = [var.security_group_id]
     }
   }
+    dead_letter_config {
+      arn = aws_sqs_queue.eventbridge_dlq.arn
+    }
+}
+
+########################################
+# Log group to capture EventBridge -> ECS target failures
+########################################
+resource "aws_cloudwatch_log_group" "eventbridge_cruise_finder" {
+  name              = "/aws/events/run-cruise-finder-daily"
+  retention_in_days = 7
+}
+
+########################################
+# DLQ for EventBridge failures
+########################################
+resource "aws_sqs_queue" "eventbridge_dlq" {
+  name                      = "eventbridge-cruise-finder-dlq"
+  message_retention_seconds = 1209600  # 14 days
+}
+
+########################################
+# Internet Gateway for ECS public access
+########################################
+resource "aws_internet_gateway" "cruise_finder" {
+  vpc_id = var.vpc_id
+
+  tags = {
+    Name = "cruise-finder-igw"
+  }
+}
+
+########################################
+# Route table entry for 0.0.0.0/0 to IGW
+########################################
+resource "aws_route" "public_internet_access" {
+  route_table_id         = var.route_table_id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.cruise_finder.id
 }

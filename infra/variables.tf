@@ -13,3 +13,12 @@ variable "security_group_id" {
   description = "Security Group ID for Fargate task"
   type        = string
 }
+
+variable "vpc_id" {
+  description = "VPC for the Fargate task"
+  type        = string
+}
+variable "route_table_id" {
+  description = "Internet Gateway Route Table for Fargate Task"
+  type        = string
+} 
