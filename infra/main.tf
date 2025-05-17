@@ -146,6 +146,21 @@ resource "aws_iam_role_policy_attachment" "cloudfront_attach" {
 # --------------------------------------
 resource "aws_ecs_cluster" "cruise_cluster" {
   name = "cruise-finder-cluster"
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
+  tags = {
+    Name = "cruise-finder-cluster"
+  }
+}
+
+# --------------------------------------
+# ECS Container Insights
+# --------------------------------------
+resource "aws_cloudwatch_log_group" "ecs_insights_logs" {
+  name              = "/aws/ecs/containerinsights/cruise-finder-cluster/performance"
+  retention_in_days = 7
 }
 
 # --------------------------------------
@@ -285,3 +300,96 @@ resource "aws_route" "public_internet_access" {
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.cruise_finder.id
 }
+
+
+######################################################
+# CLOUDFRONT
+######################################################
+resource "aws_cloudfront_distribution" "cruise_finder" {
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = ""
+  default_root_object = ""
+  http_version        = "http2and3"
+  price_class         = "PriceClass_All"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+  origin {
+    domain_name = "zf5sdrd108.execute-api.us-west-2.amazonaws.com"
+    origin_id   = "zf5sdrd108.execute-api.us-west-2.amazonaws.com"
+
+    custom_origin_config {
+      http_port                = 80
+      https_port               = 443
+      origin_protocol_policy   = "https-only"
+      origin_ssl_protocols     = ["TLSv1.2"]
+      origin_read_timeout      = 30
+      origin_keepalive_timeout = 5
+    }
+  }
+
+  origin {
+    domain_name              = "mytripdata8675309.s3.us-west-2.amazonaws.com"
+    origin_id                = "mytripdata8675309.s3.us-west-2.amazonaws.com"
+    origin_access_control_id = "ENOVD7IIZ96BA"
+
+    s3_origin_config {
+      origin_access_identity = ""
+    }
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "mytripdata8675309.s3.us-west-2.amazonaws.com"
+    viewer_protocol_policy = "redirect-to-https"
+    compress               = true
+
+    allowed_methods = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods  = ["GET", "HEAD"]
+
+    cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    origin_request_policy_id   = "bf5ae425-e28a-4bad-beb8-609c621b28a8"
+    response_headers_policy_id = "eaab4381-ed33-4a86-88ca-d9558dc6cd63"
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/prod/admin-api/*"
+    target_origin_id       = "zf5sdrd108.execute-api.us-west-2.amazonaws.com"
+    viewer_protocol_policy = "redirect-to-https"
+    compress               = true
+
+    allowed_methods = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods  = ["GET", "HEAD"]
+
+    cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    origin_request_policy_id   = "bf5ae425-e28a-4bad-beb8-609c621b28a8"
+    response_headers_policy_id = "eaab4381-ed33-4a86-88ca-d9558dc6cd63"
+  }
+
+  custom_error_response {
+    error_code            = 403
+    response_page_path    = "/index.html"
+    response_code         = "200"
+    error_caching_min_ttl = 10
+  }
+
+  custom_error_response {
+    error_code            = 404
+    response_page_path    = "/index.html"
+    response_code         = "200"
+    error_caching_min_ttl = 10
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+    ssl_support_method             = "vip"
+    minimum_protocol_version       = "TLSv1"
+  }
+} 
