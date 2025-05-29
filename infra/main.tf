@@ -4,11 +4,11 @@
 #######################################
 terraform {
   backend "s3" {
-    bucket         = "cruise-finder-tfstate"
-    key            = "infra/terraform.tfstate"
-    region         = "us-west-2"
-    use_lockfile   = true
-    encrypt        = true
+    bucket       = "cruise-finder-tfstate"
+    key          = "infra/terraform.tfstate"
+    region       = "us-west-2"
+    use_lockfile = true
+    encrypt      = true
   }
 }
 
@@ -31,7 +31,7 @@ resource "aws_ecr_repository" "cruise_finder" {
   name                 = "cruise-finder"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
-  lifecycle {prevent_destroy = true}
+  lifecycle { prevent_destroy = true }
 }
 
 # --------------------------------------
@@ -175,9 +175,9 @@ resource "aws_ecr_lifecycle_policy" "cruise_cleanup" {
         rulePriority = 1
         description  = "Keep last 3 images only"
         selection = {
-          tagStatus     = "any"
-          countType     = "imageCountMoreThan"
-          countNumber   = 3
+          tagStatus   = "any"
+          countType   = "imageCountMoreThan"
+          countNumber = 3
         }
         action = {
           type = "expire"
@@ -278,7 +278,7 @@ resource "aws_cloudwatch_log_group" "eventbridge_cruise_finder" {
 ########################################
 resource "aws_sqs_queue" "eventbridge_dlq" {
   name                      = "eventbridge-cruise-finder-dlq"
-  message_retention_seconds = 1209600  # 14 days
+  message_retention_seconds = 1209600 # 14 days
 }
 
 ########################################
@@ -313,9 +313,6 @@ resource "aws_cloudfront_distribution" "cruise_finder" {
   http_version        = "http2and3"
   price_class         = "PriceClass_All"
 
-  lifecycle {
-    prevent_destroy = true
-  }
   origin {
     domain_name = "zf5sdrd108.execute-api.us-west-2.amazonaws.com"
     origin_id   = "zf5sdrd108.execute-api.us-west-2.amazonaws.com"
@@ -343,10 +340,9 @@ resource "aws_cloudfront_distribution" "cruise_finder" {
   default_cache_behavior {
     target_origin_id       = "mytripdata8675309.s3.us-west-2.amazonaws.com"
     viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods         = ["GET", "HEAD"]
     compress               = true
-
-    allowed_methods = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
-    cached_methods  = ["GET", "HEAD"]
 
     cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
     origin_request_policy_id   = "bf5ae425-e28a-4bad-beb8-609c621b28a8"
@@ -357,10 +353,9 @@ resource "aws_cloudfront_distribution" "cruise_finder" {
     path_pattern           = "/prod/admin-api/*"
     target_origin_id       = "zf5sdrd108.execute-api.us-west-2.amazonaws.com"
     viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods         = ["GET", "HEAD"]
     compress               = true
-
-    allowed_methods = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
-    cached_methods  = ["GET", "HEAD"]
 
     cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
     origin_request_policy_id   = "bf5ae425-e28a-4bad-beb8-609c621b28a8"
@@ -369,15 +364,15 @@ resource "aws_cloudfront_distribution" "cruise_finder" {
 
   custom_error_response {
     error_code            = 403
+    response_code         = 200
     response_page_path    = "/index.html"
-    response_code         = "200"
     error_caching_min_ttl = 10
   }
 
   custom_error_response {
     error_code            = 404
+    response_code         = 200
     response_page_path    = "/index.html"
-    response_code         = "200"
     error_caching_min_ttl = 10
   }
 
@@ -389,7 +384,68 @@ resource "aws_cloudfront_distribution" "cruise_finder" {
 
   viewer_certificate {
     cloudfront_default_certificate = true
-    ssl_support_method             = "vip"
     minimum_protocol_version       = "TLSv1"
+    ssl_support_method             = "vip"
   }
-} 
+
+  wait_for_deployment = true
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes = [
+      origin,
+      viewer_certificate[0].ssl_support_method,
+    ]
+  }
+}
+
+####################################################
+# SPACELIFT.IO - IAM Role
+####################################################
+resource "aws_iam_role" "spacelift_runner" {
+  name = "SpaceliftCruiseFinderRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          AWS = "arn:aws:iam::324880187172:root" # ✅ Spacelift US Account ID
+        },
+        Action = "sts:AssumeRole",
+        Condition = {
+          StringLike = {
+            "sts:ExternalId" = "mbroadfo@*"
+          }
+        }
+      }
+    ]
+  })
+}
+
+####################################################
+# SPACELIFT.IO - IAM Policy
+####################################################
+resource "aws_iam_role_policy" "spacelift_policy" {
+  name = "SpaceliftCruiseFinderPolicy"
+  role = aws_iam_role.spacelift_runner.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "ecs:*",
+          "ecr:*",
+          "logs:*",
+          "events:*",
+          "iam:PassRole",
+          "s3:*"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
