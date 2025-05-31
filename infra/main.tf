@@ -196,12 +196,12 @@ resource "aws_ecr_lifecycle_policy" "cruise_cleanup" {
 ########################################
 # CloudWatch Scheduled Event
 ########################################
-# resource "aws_cloudwatch_event_rule" "daily_cruise_finder" {
-#   name                = "run-cruise-finder-daily"
-#   description         = "Runs cruise-finder ECS task every day at 5:00 AM UTC"
-#   schedule_expression = "cron(0 11 * * ? *)"  # 5:00 AM MT daily
-#   state               = "ENABLED"
-# }
+resource "aws_cloudwatch_event_rule" "daily_cruise_finder" {
+  name                = "run-cruise-finder-daily"
+  description         = "Runs cruise-finder ECS task every day at 5:00 AM UTC"
+  schedule_expression = "cron(0 11 * * ? *)"  # 5:00 AM MT daily
+  state               = "ENABLED"
+}
 
 ########################################
 # IAM Role to allow EventBridge to run ECS task
@@ -243,27 +243,27 @@ resource "aws_iam_role_policy" "eventbridge_invoke_ecs_policy" {
 ########################################
 # Event Target that runs ECS task
 ########################################
-# resource "aws_cloudwatch_event_target" "run_task" {
-#   rule      = aws_cloudwatch_event_rule.daily_cruise_finder.name
-#   role_arn  = aws_iam_role.eventbridge_invoke_ecs.arn
-#   target_id = "CruiseFinderTask"
-#   arn       = aws_ecs_cluster.cruise_cluster.arn
+resource "aws_cloudwatch_event_target" "run_task" {
+  rule      = aws_cloudwatch_event_rule.daily_cruise_finder.name
+  role_arn  = aws_iam_role.eventbridge_invoke_ecs.arn
+  target_id = "CruiseFinderTask"
+  arn       = aws_ecs_cluster.cruise_cluster.arn
 
-#   ecs_target {
-#     launch_type         = "FARGATE"
-#     platform_version    = "LATEST"
-#     task_definition_arn = "arn:aws:ecs:us-west-2:491696534851:task-definition/cruise-finder-task:73"  # <-- PINNED manually
+  ecs_target {
+    launch_type         = "FARGATE"
+    platform_version    = "LATEST"
+    task_definition_arn = "arn:aws:ecs:us-west-2:491696534851:task-definition/cruise-finder-task:73"  # <-- PINNED manually
 
-#     network_configuration {
-#       subnets          = [var.subnet_id]
-#       assign_public_ip = true
-#       security_groups  = [var.security_group_id]
-#     }
-#   }
-#     dead_letter_config {
-#       arn = aws_sqs_queue.eventbridge_dlq.arn
-#     }
-# }
+    network_configuration {
+      subnets          = [var.subnet_id]
+      assign_public_ip = true
+      security_groups  = [var.security_group_id]
+    }
+  }
+    dead_letter_config {
+      arn = aws_sqs_queue.eventbridge_dlq.arn
+    }
+}
 
 ########################################
 # Log group to capture EventBridge -> ECS target failures
