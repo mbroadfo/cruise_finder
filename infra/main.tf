@@ -199,7 +199,7 @@ resource "aws_ecr_lifecycle_policy" "cruise_cleanup" {
 resource "aws_cloudwatch_event_rule" "daily_cruise_finder" {
   name                = "run-cruise-finder-daily"
   description         = "Runs cruise-finder ECS task every day at 5:00 AM UTC"
-  schedule_expression = "cron(0 11 * * ? *)"  # 5:00 AM MT daily
+  schedule_expression = "cron(0 10 * * ? *)"  # 4:00 AM MST daily
   state               = "ENABLED"
 }
 
@@ -284,11 +284,11 @@ resource "aws_sqs_queue" "eventbridge_dlq" {
 ########################################
 # Internet Gateway for ECS public access
 ########################################
-resource "aws_internet_gateway" "cruise_finder" {
+resource "aws_internet_gateway" "shared-igw" {
   vpc_id = var.vpc_id
 
   tags = {
-    Name = "cruise-finder-igw"
+    Name = "shared-igw"
   }
 }
 
@@ -298,7 +298,7 @@ resource "aws_internet_gateway" "cruise_finder" {
 resource "aws_route" "public_internet_access" {
   route_table_id         = var.route_table_id
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.cruise_finder.id
+  gateway_id             = aws_internet_gateway.shared-igw.id
 }
 
 
