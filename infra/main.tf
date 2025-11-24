@@ -74,7 +74,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_access_attach" {
   policy_arn = aws_iam_policy.ecs_task_access.arn
 }
 
-# Custom permissions for secrets + S3 + CloudFront
+# Custom permissions for S3 + CloudFront
 resource "aws_iam_policy" "ecs_task_access" {
   name = "ecs-cruise-finder-task-access"
 
@@ -82,13 +82,16 @@ resource "aws_iam_policy" "ecs_task_access" {
     Version : "2012-10-17",
     Statement : [
       {
+        Sid : "S3UploadAccess",
         Effect : "Allow",
-        Action : [
-          "secretsmanager:GetSecretValue",
-          "s3:PutObject",
-          "cloudfront:CreateInvalidation"
-        ],
-        Resource : "*"
+        Action : ["s3:PutObject"],
+        Resource : "arn:aws:s3:::mytripdata8675309/*"
+      },
+      {
+        Sid : "CloudFrontInvalidation",
+        Effect : "Allow",
+        Action : ["cloudfront:CreateInvalidation"],
+        Resource : "arn:aws:cloudfront::491696534851:distribution/E22G95LIEIJY6O"
       }
     ]
   })
@@ -199,7 +202,7 @@ resource "aws_ecr_lifecycle_policy" "cruise_cleanup" {
 resource "aws_cloudwatch_event_rule" "daily_cruise_finder" {
   name                = "run-cruise-finder-daily"
   description         = "Runs cruise-finder ECS task every day at 5:00 AM UTC"
-  schedule_expression = "cron(0 10 * * ? *)"  # 4:00 AM MST daily
+  schedule_expression = "cron(0 10 * * ? *)" # 4:00 AM MST daily
   state               = "ENABLED"
 }
 
@@ -252,7 +255,7 @@ resource "aws_cloudwatch_event_target" "run_task" {
   ecs_target {
     launch_type         = "FARGATE"
     platform_version    = "LATEST"
-    task_definition_arn = "arn:aws:ecs:us-west-2:491696534851:task-definition/cruise-finder-task:73"  # <-- PINNED manually
+    task_definition_arn = "arn:aws:ecs:us-west-2:491696534851:task-definition/cruise-finder-task:73" # <-- PINNED manually
 
     network_configuration {
       subnets          = [var.subnet_id]
@@ -260,9 +263,9 @@ resource "aws_cloudwatch_event_target" "run_task" {
       security_groups  = [var.security_group_id]
     }
   }
-    dead_letter_config {
-      arn = aws_sqs_queue.eventbridge_dlq.arn
-    }
+  dead_letter_config {
+    arn = aws_sqs_queue.eventbridge_dlq.arn
+  }
 }
 
 ########################################

@@ -3,24 +3,13 @@ import json
 import logging
 from typing import Any
 import boto3
-from aws_secrets import inject_env_from_secrets
-
-# Load secrets (early)
-inject_env_from_secrets("cruise-finder-secrets")
 
 # AWS S3 Configuration
-AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-AWS_REGION = os.getenv("AWS_REGION", "us-west-2")
+AWS_REGION = "us-west-2"
 S3_BUCKET_NAME = "mytripdata8675309"
 
-# Initialize S3 Client
-s3 = boto3.client(
-    "s3",
-    aws_access_key_id=AWS_ACCESS_KEY,
-    aws_secret_access_key=AWS_SECRET_KEY,
-    region_name=AWS_REGION,
-)
+# Initialize S3 Client (using IAM role credentials from ECS task)
+s3 = boto3.client("s3", region_name=AWS_REGION)
 
 # File Configuration
 OUTPUT_FOLDER = "output"
