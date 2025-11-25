@@ -5,3 +5,15 @@ __pycache__/
 *.env
 *.log
 output/
+.git/
+.github/
+.venv/
+venv/
+*.md
+debug_selectors.py
+test_fix.py
+dump_py.py
+check_program.ps1
+trip_list (1).json
+graph.dot
+infra/

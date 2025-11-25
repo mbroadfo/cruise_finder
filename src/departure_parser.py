@@ -39,7 +39,9 @@ def fetch_departures(page: Any, trip: Any) -> list[dict[str, str]]:
                     departure = elements.nth(i)
 
                     year_locator = departure.locator("[data-testid='departure-hit-year']")
-                    date_range_locator = departure.locator("p[class*='drDbhx']")
+                    # Use robust selector: find all <p> tags, filter for date-like content
+                    # Old brittle selector was: p[class*='drDbhx'] (class names change on redeploy)
+                    date_range_locator = departure.locator("p")
                     ship_name_locator = departure.locator("i")
                     booking_url_locator = departure.locator("a")
                     land_expedition_locator = departure.locator("div[data-land-expedition='true']")
@@ -48,10 +50,14 @@ def fetch_departures(page: Any, trip: Any) -> list[dict[str, str]]:
                         latest_year = year_locator.text_content().strip()
                         logging.info(f"  Processing Departures for: {latest_year}")
 
+                    # Filter <p> tags to get only dates (not prices which contain "$")
+                    all_p_texts = date_range_locator.all_text_contents()
+                    date_texts = [text.strip() for text in all_p_texts if text.strip() and "$" not in text]
+                    
                     missing_fields = []
                     if latest_year is None:
                         missing_fields.append("year")
-                    if date_range_locator.count() < 2:
+                    if len(date_texts) < 2:
                         missing_fields.append("date range")
                     if booking_url_locator.count() == 0:
                         missing_fields.append("booking URL")
@@ -60,7 +66,6 @@ def fetch_departures(page: Any, trip: Any) -> list[dict[str, str]]:
                         logging.warning(f"Skipping departure {i} due to missing fields: {', '.join(missing_fields)}")
                         continue
 
-                    date_range = date_range_locator.all_text_contents()
                     ship_name = "Land Expedition" if land_expedition_locator.count() > 0 else ship_name_locator.text_content().strip()
 
                     booking_url = booking_url_locator.get_attribute("href")
@@ -70,8 +75,8 @@ def fetch_departures(page: Any, trip: Any) -> list[dict[str, str]]:
                     if not booking_url or booking_url in seen_urls:
                         continue  # Skip duplicates
 
-                    start_date = f"{latest_year} {date_range[0].strip()}"
-                    end_date = f"{latest_year} {date_range[1].strip()}"
+                    start_date = f"{latest_year} {date_texts[0]}"
+                    end_date = f"{latest_year} {date_texts[1]}"
 
                     try:
                         parsed_start = datetime.strptime(start_date, "%Y %b %d")
