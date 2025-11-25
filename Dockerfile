@@ -38,7 +38,7 @@ RUN python -m playwright install --with-deps
 COPY . .
 
 # Set Python Path
-ENV PYTHONPATH="${PYTHONPATH}:/app/src"
+ENV PYTHONPATH="/app/src"
 
 # Default command
 CMD ["python", "-m", "src.main"]
