@@ -26,6 +26,8 @@
 - Avoid printing full command outputs unless debugging
 - State skipped steps briefly (e.g., "No action needed")
 - Don't explain project structure unless asked
+- **NEVER suggest terminal commands without asking the user first** - especially destructive operations like file deletion
+- When user says to proceed with a task, execute it - don't ask for permission again
 
 ### Python Environment
 - Use virtual environment: `python -m venv .venv`
@@ -38,9 +40,13 @@
 
 **General**:
 - Use current directory as working directory unless specified otherwise
-- When chaining PowerShell commands, use `;` separators instead of `&&`
+- **PowerShell Commands**: ALWAYS use PowerShell syntax (`;` not `&&`, `cd` not directory separator in same command)
+  - ❌ WRONG: `cd infra && terraform plan` (Unix syntax)
+  - ✅ CORRECT: `cd infra; terraform plan` (PowerShell syntax)
+  - ✅ BETTER: Separate commands or use full paths
 - When writing Markdown, ensure headings and lists have blank lines above and below (linting rules)
 - Markdown linting during pre-commit: Always run get_errors on all markdown files and fix before committing
+- **Markdown Linting**: When encountering many linting errors, use Python/PowerShell scripts to fix systematically rather than manual replace_string_in_file calls
 - Project name: "cruise_finder" or "Lindblad Cruise Finder" - be consistent
 
 **Python-Specific**:
@@ -132,7 +138,7 @@
 - CloudWatch Logs: Check `/ecs/cruise-finder` for execution logs
 
 **Deployment Testing**:
-- Terraform plan: `cd infra && terraform plan`
+- Terraform plan: `cd infra; terraform plan` (PowerShell syntax)
 - Build and push to ECR: See README.md deployment section
 - Manual task execution: `aws ecs run-task --cluster cruise-finder-cluster ...`
 - Verify S3 upload: Check `s3://mytripdata8675309/trip_list.json`
@@ -308,3 +314,52 @@ refactor(iam): consolidate to 5 clean terraform-lcf policies
 - If issues are found, fix them before proceeding to commit
 - Keep the user informed of progress without excessive verbosity
 - If any step fails, stop and resolve before continuing
+
+## Common Mistakes to Avoid
+
+### PowerShell Environment Mistakes
+- ❌ **NEVER use Unix shell syntax** (`&&`, `||`) in PowerShell commands
+- ❌ **NEVER use forward slashes in cd commands** like `cd infra && terraform plan`
+- ✅ **ALWAYS use PowerShell syntax**: semicolon (`;`) for command chaining
+- ✅ **ALWAYS test command syntax** before suggesting to user
+
+### File Management Mistakes
+- ❌ **NEVER delete files without explicit user confirmation** - especially documentation files
+- ❌ **NEVER assume a file is "not needed"** without asking the user
+- ✅ **ALWAYS ask before deleting** any file, even if it seems temporary or unused
+- ✅ **READ FILE CONTENT** before making assumptions about its purpose
+
+### Pre-Commit Process Mistakes
+- ❌ **NEVER skip linting checks** - markdown linting errors are NEVER acceptable in commits
+- ❌ **NEVER use manual edits for systematic issues** - use scripts for bulk fixes
+- ❌ **NEVER suggest committing** without completing ALL checklist steps
+- ✅ **ALWAYS verify all markdown files are lint-clean** before staging
+- ✅ **ALWAYS use Python/PowerShell scripts** for fixing multiple similar linting errors
+- ✅ **ALWAYS check file contents** after user makes changes (files may have been edited)
+
+### Tool Usage Mistakes
+- ❌ **NEVER run destructive tool calls in parallel** - ask first, then execute sequentially
+- ❌ **NEVER assume the user wants something deleted** based on the filename alone
+- ✅ **ALWAYS wait for user confirmation** on destructive actions
+- ✅ **ALWAYS read current file state** before editing (user may have made changes)
+
+### Communication Mistakes
+- ❌ **NEVER ask redundant questions** - if user says "proceed", don't ask "should I proceed?"
+- ❌ **NEVER stop mid-checklist** to ask permission for the next step (they already said go)
+- ✅ **EXECUTE the checklist systematically** when user says "prepare to commit"
+- ✅ **ASK ONLY for truly destructive or ambiguous actions** (like deleting files)
+
+### Markdown Linting Mistakes
+- ❌ **NEVER make 50+ individual replace_string_in_file calls** to fix linting errors
+- ❌ **NEVER ignore multiple blank line errors** (they count as many errors)
+- ✅ **USE Python scripts with regex** to fix systematic markdown issues in one operation
+- ✅ **COLLAPSE multiple operations** into single script execution for efficiency
+
+### Context Awareness Mistakes
+- ❌ **NEVER forget the shell environment** - this project uses PowerShell on Windows
+- ❌ **NEVER mix Unix and Windows command syntax**
+- ❌ **NEVER run commands without checking current directory** - commands may fail or affect wrong location
+- ✅ **CHECK the shell type** in context before suggesting commands
+- ✅ **ALWAYS use PowerShell-compatible syntax** for this project
+- ✅ **ALWAYS check terminal context for current working directory** before running commands
+- ✅ **CHANGE to correct directory first** if command requires specific location (e.g., `cd infra` before `terraform plan`)
